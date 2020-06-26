@@ -37,7 +37,6 @@ private:
     uint8_t registers[VideoRegisterType::WX + 1];
     uint8_t framebuffer[160 * 144];
 
-    long mode;
     long cycles, cycles_extra;
     long background_tilemap;
     long window_tilemap;
@@ -57,6 +56,8 @@ public:
     void render_background();
     void render_window();
     void render_sprites();
+
+    void oam_write(long position, long data);
 
     static Video* instance;
 };

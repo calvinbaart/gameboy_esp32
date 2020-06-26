@@ -36,6 +36,26 @@ void BIT_Impl(RegisterType reg, long bit, GameboyCPU* cpu)
     cpu->cycle(4);
 }
 
+void CP(long val, GameboyCPU* cpu)
+{
+    cpu->clear_flags();
+    cpu->enable_flag(Flags::AddSubFlag);
+
+    auto A = cpu->get(RegisterType::A);
+
+    if (val == A) {
+        cpu->enable_flag(Flags::ZeroFlag);
+    }
+
+    if (A < val) {
+        cpu->enable_flag(Flags::CarryFlag);
+    }
+
+    if (((A - val) & 0xF) > (A & 0xF)) {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+}
+
 void LD_0x01x11x21x31(Instruction instruction)
 {
     auto val = instruction.cpu->read_u16();
@@ -203,6 +223,28 @@ void DEC_0x05x0Dx15x1Dx25x2Dx3D(Instruction instruction)
     }
 
     toggle_zero_flag(instruction.cpu, result);
+}
+
+void LD_0x22(Instruction instruction)
+{
+    instruction.cpu->get_memory()->write8(instruction.cpu->get(RegisterType::HL), instruction.cpu->get(RegisterType::A));
+    instruction.cpu->increment(RegisterType::HL);
+}
+
+void INC_0x03x13x23x33(Instruction instruction)
+{
+    auto reg = instruction.cpu->read_register_type(instruction.opcode >> 4, false);
+    instruction.cpu->increment(reg);
+}
+
+void RET_0xC9(Instruction instruction)
+{
+    instruction.cpu->set(RegisterType::PC, instruction.cpu->pop_stack());
+}
+
+void CP_0xFE(Instruction instruction)
+{
+    CP(instruction.cpu->read_u8(), instruction.cpu);
 }
 
 void RL_0x11(Instruction instruction)

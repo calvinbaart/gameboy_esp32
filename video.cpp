@@ -125,8 +125,8 @@ Video::Video(GameboyCPU* cpu, GxEPD_Class* display)
 
     instance = this;
 
-    memset(framebuffer, 160 * 144 * sizeof(uint8_t), 0);
-    memset(registers, (VideoRegisterType::WX + 1) * sizeof(uint8_t), 0);
+    memset(framebuffer, 0, 160 * 144 * sizeof(uint8_t));
+    memset(registers, 0, (VideoRegisterType::WX + 1) * sizeof(uint8_t));
 
     auto memory = cpu->get_memory();
     memory->add_register(0xFF40, &::read_register, &::write_register);
@@ -149,7 +149,7 @@ void Video::tick(long delta)
 
     if (!(control & (1 << 7))) {
         registers[VideoRegisterType::LY] = 0;
-        mode = 0;
+        registers[VideoRegisterType::STAT] = (registers[VideoRegisterType::STAT] & ~0x03);
         cycles = 0;
         
         return;
@@ -160,6 +160,8 @@ void Video::tick(long delta)
     active_tileset = (control & (1 << 4)) ? 1 : 0;
     cycles += delta;
     cycles_extra += delta;
+
+    auto mode = registers[VideoRegisterType::STAT] & 0x03;
 
     switch (mode) {
         case VideoMode::HBlank:
@@ -181,7 +183,7 @@ void Video::tick(long delta)
                     render();
                     vblank = 0;
 
-                    mode = VideoMode::VBlank;
+                    registers[VideoRegisterType::STAT] = ((registers[VideoRegisterType::STAT] & ~0x03) | VideoMode::VBlank);
 //                    cpu->requestInterrupt(Interrupt.VBlank);
 
                     if ((registers[VideoRegisterType::STAT] & (1 << 4)) != 0) {
@@ -196,7 +198,7 @@ void Video::tick(long delta)
 //                        this._cpu.requestInterrupt(Interrupt.LCDStat);
                     }
 
-                    mode = VideoMode::ReadingOAM;
+                    registers[VideoRegisterType::STAT] = ((registers[VideoRegisterType::STAT] & ~0x03) | VideoMode::ReadingOAM);
                 }
             }
             break;
@@ -209,7 +211,7 @@ void Video::tick(long delta)
 
             if (cycles >= 4560) {
                 cycles -= 4560;
-                mode = VideoMode::ReadingOAM;
+                registers[VideoRegisterType::STAT] = ((registers[VideoRegisterType::STAT] & ~0x03) | VideoMode::ReadingOAM);
             }
             break;
 
@@ -217,7 +219,7 @@ void Video::tick(long delta)
             if (cycles >= 80) {
                 cycles -= 80;
                 scanline_transferred = false;
-                mode = VideoMode::ReadingOAMVRAM;
+                registers[VideoRegisterType::STAT] = ((registers[VideoRegisterType::STAT] & ~0x03) | VideoMode::ReadingOAMVRAM);
             }
             break;
 
@@ -229,7 +231,7 @@ void Video::tick(long delta)
 
             if (cycles >= 172) {
                 cycles -= 172;
-                mode = VideoMode::HBlank;
+                registers[VideoRegisterType::STAT] = ((registers[VideoRegisterType::STAT] & ~0x03) | VideoMode::HBlank);
 
                 if ((registers[VideoRegisterType::STAT] & (1 << 3)) != 0) {
 //                    this._cpu.requestInterrupt(Interrupt.LCDStat);
@@ -293,6 +295,7 @@ void Video::render_scanline()
 
 void Video::render()
 {
+    Serial.println("render");
     for (long x = 0; x < 160; x++)
     {
         for (long y = 0; y < 144; y++)
@@ -449,4 +452,9 @@ void Video::render_background()
 
 void Video::render_sprites()
 {
+}
+
+void Video::oam_write(long position, long data)
+{
+    Serial.println("TODO: implement oam_write");
 }

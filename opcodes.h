@@ -15,10 +15,14 @@ extern void LD_0x1A(Instruction instruction);
 extern void INC_0x04x0Cx14x1Cx24x2Cx3C(Instruction instruction);
 extern void CALL_0xCD(Instruction instruction);
 extern void LD_0x40(Instruction instruction);
+extern void LD_0x22(Instruction instruction);
 extern void PUSH_0xC5(Instruction instruction);
 extern void POP_0xC1(Instruction instruction);
 extern void RLA_0x17(Instruction instruction);
 extern void DEC_0x05x0Dx15x1Dx25x2Dx3D(Instruction instruction);
+extern void INC_0x03x13x23x33(Instruction instruction);
+extern void RET_0xC9(Instruction instruction);
+extern void CP_0xFE(Instruction instruction);
 
 // CB
 extern void BIT_0x7C(Instruction instruction);
@@ -28,7 +32,7 @@ static void (*opcodes[])(Instruction) = {
     nullptr, //0x00
     &LD_0x01x11x21x31, //0x01
     nullptr, //0x02
-    nullptr, //0x03
+    &INC_0x03x13x23x33, //0x03
     &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x04
     &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x05
     &LD_0x06, //0x06
@@ -44,7 +48,7 @@ static void (*opcodes[])(Instruction) = {
     nullptr, //0x10
     &LD_0x01x11x21x31, //0x11
     nullptr, //0x12
-    nullptr, //0x13
+    &INC_0x03x13x23x33, //0x13
     &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x14
     &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x15
     &LD_0x06, //0x16
@@ -59,8 +63,8 @@ static void (*opcodes[])(Instruction) = {
     nullptr, //0x1F
     &JR_0x20, //0x20
     &LD_0x01x11x21x31, //0x21
-    nullptr, //0x22
-    nullptr, //0x23
+    &LD_0x22, //0x22
+    &INC_0x03x13x23x33, //0x23
     &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x24
     &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x25
     &LD_0x06, //0x26
@@ -76,7 +80,7 @@ static void (*opcodes[])(Instruction) = {
     &JR_0x20, //0x30
     &LD_0x01x11x21x31, //0x31
     &LD_0x32, //0x32
-    nullptr, //0x33
+    &INC_0x03x13x23x33, //0x33
     nullptr, //0x34
     nullptr, //0x35
     nullptr, //0x36
@@ -226,7 +230,7 @@ static void (*opcodes[])(Instruction) = {
     nullptr, //0xC6
     nullptr, //0xC7
     nullptr, //0xC8
-    nullptr, //0xC9
+    &RET_0xC9, //0xC9
     nullptr, //0xCA
     nullptr, //0xCB
     nullptr, //0xCC
@@ -279,7 +283,7 @@ static void (*opcodes[])(Instruction) = {
     nullptr, //0xFB
     nullptr, //0xFC
     nullptr, //0xFD
-    nullptr, //0xFE
+    &CP_0xFE, //0xFE
     nullptr, //0xFF
 };
 
@@ -287,7 +291,7 @@ static int opcode_ticks[] = {
     0, //0x00
     12, //0x01
     0, //0x02
-    0, //0x03
+    8, //0x03
     4, //0x04
     4, //0x05
     8, //0x06
@@ -303,7 +307,7 @@ static int opcode_ticks[] = {
     0, //0x10
     12, //0x11
     0, //0x12
-    0, //0x13
+    8, //0x13
     4, //0x14
     4, //0x15
     8, //0x16
@@ -318,8 +322,8 @@ static int opcode_ticks[] = {
     0, //0x1F
     8, //0x20
     12, //0x21
-    0, //0x22
-    0, //0x23
+    8, //0x22
+    8, //0x23
     4, //0x24
     4, //0x25
     8, //0x26
@@ -335,7 +339,7 @@ static int opcode_ticks[] = {
     8, //0x30
     12, //0x31
     8, //0x32
-    0, //0x33
+    8, //0x33
     0, //0x34
     0, //0x35
     0, //0x36
@@ -485,7 +489,7 @@ static int opcode_ticks[] = {
     0, //0xC6
     0, //0xC7
     0, //0xC8
-    0, //0xC9
+    16, //0xC9
     0, //0xCA
     0, //0xCB
     0, //0xCC
@@ -538,7 +542,7 @@ static int opcode_ticks[] = {
     0, //0xFB
     0, //0xFC
     0, //0xFD
-    0, //0xFE
+    8, //0xFE
     0, //0xFF
 };
 

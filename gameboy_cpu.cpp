@@ -173,6 +173,11 @@ Memory* GameboyCPU::get_memory()
     return memory;
 }
 
+Video* GameboyCPU::get_video()
+{
+    return video;
+}
+
 RegisterType GameboyCPU::read_register_type(long val, bool useAF)
 {
     switch (val & 0x03)

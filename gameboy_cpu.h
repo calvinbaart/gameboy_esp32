@@ -73,6 +73,7 @@ public:
     long decrement(RegisterType reg, long num = 1);
 
     Memory* get_memory();
+    Video* get_video();
 
     RegisterType read_register_type(long val, bool useAF);
     RegisterType read_byte_register_type(long val);

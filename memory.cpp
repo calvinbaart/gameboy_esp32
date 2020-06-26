@@ -1,11 +1,19 @@
 #include "memory.h"
+#include "video.h"
 #include "gameboy_cpu.h"
 
 Memory::Memory(GameboyCPU *cpu) : bios_enabled(true), vram_bank()
 {
     this->cpu = cpu;
 
-    memset(video_ram, 2 * 0x2000, 0xFF);
+    vram_bank = 0;
+    wram_bank = 1;
+
+    memset(video_ram, 0xFF, 2 * 0x2000);
+    memset(hram, 0xFF, 127);
+    memset(oam_ram, 0xFF, 0x0A);
+    memset(ram, 0xFF, 0x8000);
+    memset(wram, 0xFF, 8 * 0x1000);
 }
 
 void Memory::set_bios(File bios_file)
@@ -57,42 +65,32 @@ long Memory::read8(long position)
     {
         case 0x8000:
         case 0x9000:
-          Serial.println("TODO: implement read video ram");
-          return 0xFF;
-//            return read_video_ram(position, this._vramBank);
+            return read_video_ram(position, vram_bank);
             
         case 0xC000:
-          Serial.println("TODO: implement read work ram (1)");
-          return 0xFF;
-//            return read_work_ram(position, 1);
+            return read_work_ram(position, 1);
             
         case 0xD000:
-          Serial.println("TODO: implement read work ram (2)");
-          return 0xFF;
-//            return read_work_ram(position, this._wramBank);
+            return read_work_ram(position, wram_bank);
             
         case 0xF000:
-          Serial.println("TODO: implement read hram / oam ram");
-          return 0xFF;
-//            if (position >= 0xFF80 && position <= 0xFFFE)
-//            {
-//                return this._hram[position - 0xFF80];
-//            }
-//            else if (position >= 0xFE00 && position <= 0xFE9F)
-//            {
-//                return this._oamram[position - 0xFE00];
-//            }
+            if (position >= 0xFF80 && position <= 0xFFFE)
+            {
+                return hram[position - 0xFF80];
+            }
+            else if (position >= 0xFE00 && position <= 0xFE9F)
+            {
+                return oam_ram[position - 0xFE00];
+            }
     
         default:
-          Serial.println("TODO: implement read general memory");
-          return 0xFF;
 //            if (this._controller)
 //            {
 //                return this._controller.read(position);
 //            }
 //            else
 //            {
-//                return this.readInternal8(position);
+                return read_internal(position);
 //            }
     }
 
@@ -121,28 +119,24 @@ void Memory::write8(long position, long data)
 
         case 0xC000:
         case 0xD000:
-              Serial.println("TODO: implement write work ram");
-//            this.writeWorkRam(position, this._wramBank, data);
+            write_work_ram(position, wram_bank, data);
             break;
 
         case 0xF000:
-              Serial.println("TODO: implement write h ram / oam ram");
-//            if (position >= 0xFF80 && position <= 0xFFFE) {
-//                this._hram[position - 0xFF80] = data & 0xFF;
-//                break;
-//            } else if (position >= 0xFE00 && position <= 0xFE9F) {
-//                this._oamram[position - 0xFE00] = data & 0xFF;
-//                this._cpu.Display.oamWrite(position - 0xFE00, data & 0xFF);
-//                break;
-//            }
-            break;
+            if (position >= 0xFF80 && position <= 0xFFFE) {
+                hram[position - 0xFF80] = data & 0xFF;
+                break;
+            } else if (position >= 0xFE00 && position <= 0xFE9F) {
+                oam_ram[position - 0xFE00] = data & 0xFF;
+                cpu->get_video()->oam_write(position - 0xFE00, data & 0xFF);
+                break;
+            }
 
         default:
-              Serial.println("TODO: implement write rom");
 //            if (this._controller) {
 //                this._controller.write(position, data & 0xFF);
 //            } else {
-//                  write_internal8(position, data & 0xFF);
+                  write_internal(position, data & 0xFF);
 //            }
     }
 }
@@ -151,4 +145,51 @@ void Memory::add_register(long location, long (*callback_read)(long), void (*cal
 {
     read_registers[location] = callback_read;
     write_registers[location] = callback_write;
+}
+
+uint8_t Memory::read_work_ram(long position, long bank)
+{
+    switch (position & 0xF000)
+    {
+        default:
+        case 0xC000:
+            return wram[0][position - 0xC000];
+        
+        case 0xD000:
+            return wram[1][position - 0xD000];
+    }
+}
+
+uint8_t Memory::read_internal(long position)
+{
+    return 0xFF;
+//    if (!this._rom || position >= this._rom.length) {
+//        return 0xFF;
+//    }
+//
+//    return this._rom[position];
+}
+
+void Memory::write_work_ram(long position, long bank, uint8_t data)
+{
+    switch (position & 0xF000)
+    {
+        default:
+        case 0xC000:
+            wram[0][position - 0xC000] = data & 0xFF;
+            break;
+
+        case 0xD000:
+            wram[1][position - 0xD000] = data & 0xFF;
+            break;
+    }
+}
+
+void Memory::write_internal(long position, uint8_t data)
+{
+//    if (!this._rom) {
+//        return;
+//    }
+//
+//    this._rom[position] = data & 0xFF;
 }
