@@ -2,6 +2,7 @@
 #define _MEMORY_H_
 
 #include "board_config.h"
+#include <map>
 
 class GameboyCPU;
 class Memory
@@ -15,9 +16,10 @@ private:
 
     uint8_t video_ram[2][0x2000];
 
-    long vram_bank;
+    std::map<long, long (*)(long)> read_registers;
+    std::map<long, void (*)(long, long)> write_registers;
 
-    void write_video_ram(long position, long bank, long data);
+    long vram_bank;
 public:
     Memory(GameboyCPU* cpu);
 
@@ -26,6 +28,11 @@ public:
 
     long read8(long location);
     void write8(long location, long byte);
+
+    uint8_t read_video_ram(long position, long bank);
+    void write_video_ram(long position, long bank, uint8_t data);
+
+    void add_register(long location, long (*callback_read)(long), void (*callback_write)(long, long));
 };
 
 #endif

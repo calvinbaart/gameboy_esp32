@@ -1,16 +1,23 @@
 #include "gameboy_cpu.h"
 #include "memory.h"
+#include "video.h"
 #include "opcodes.h"
+
+GameboyCPU* GameboyCPU::instance = nullptr;
 
 GameboyCPU::GameboyCPU(GxEPD_Class* display) : registers()
 {
     memory = new Memory(this);
+    video = new Video(this, display);
     this->display = display;
+
+    instance = this;
 }
 
 void GameboyCPU::tick(long num_cycles)
 {
-
+    cycles += num_cycles;
+    video->tick(num_cycles);
 }
 
 void GameboyCPU::set_bios(File bios)

@@ -45,11 +45,13 @@ struct Instruction
 };
 
 class Memory;
+class Video;
 class GameboyCPU
 {
 private:
     Registers registers;
     Memory* memory;
+    Video* video;
     GxEPD_Class* display;
     long cycles;
 
@@ -90,6 +92,8 @@ public:
 
     void push_stack(long num);
     long pop_stack();
+
+    static GameboyCPU* instance;
 };
 
 #endif

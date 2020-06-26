@@ -168,6 +168,99 @@ void LD_0x40(Instruction instruction)
     instruction.cpu->set(r1, instruction.cpu->get(r2));
 }
 
+void PUSH_0xC5(Instruction instruction)
+{
+    auto reg = instruction.cpu->read_register_type(instruction.opcode >> 4, true);
+
+    instruction.cpu->push_stack(instruction.cpu->get(reg));
+}
+
+void POP_0xC1(Instruction instruction)
+{
+    auto reg = instruction.cpu->read_register_type(instruction.opcode >> 4, true);
+
+    instruction.cpu->set(reg, instruction.cpu->pop_stack());
+
+    if (((instruction.opcode >> 4) & 0x03) == 0x03) {
+        instruction.cpu->set(reg, instruction.cpu->get(reg) & 0xFFF0);
+    }
+}
+
+void DEC_0x05x0Dx15x1Dx25x2Dx3D(Instruction instruction)
+{
+    auto reg = instruction.cpu->read_byte_register_type(instruction.opcode >> 3);
+
+    instruction.cpu->enable_flag(Flags::AddSubFlag);
+    instruction.cpu->disable_flag(Flags::ZeroFlag);
+
+    instruction.cpu->decrement(reg);
+
+    auto result = instruction.cpu->get(reg);
+    if ((result & 0x0F) == 0x0F) {
+        instruction.cpu->enable_flag(Flags::HalfCarryFlag);
+    } else {
+        instruction.cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(instruction.cpu, result);
+}
+
+void RL_0x11(Instruction instruction)
+{
+    instruction.cpu->cycle(4);
+
+    auto reg = instruction.cpu->read_byte_register_type(instruction.opcode);
+    auto result = 0;
+
+    if ((instruction.opcode & 0x7) == 6) {
+        result = instruction.cpu->get_memory()->read8(instruction.cpu->get(RegisterType::HL));
+
+        instruction.cpu->cycle(4);
+    } else {
+        result = instruction.cpu->get(reg);
+    }
+
+    auto carry = instruction.cpu->is_flag_set(Flags::CarryFlag) ? 0x01 : 0x00;
+
+    instruction.cpu->clear_flags();
+
+    if ((result & 0x80) != 0) {
+        instruction.cpu->enable_flag(Flags::CarryFlag);
+    }
+
+    result <<= 1;
+    result |= carry;
+
+    if ((instruction.opcode & 0x7) == 6) {
+        instruction.cpu->get_memory()->write8(instruction.cpu->get(RegisterType::HL), result);
+
+        instruction.cpu->cycle(4);
+    } else {
+        instruction.cpu->set(reg, result);
+    }
+
+    toggle_zero_flag(instruction.cpu, result);
+    instruction.cpu->cycle(4);
+}
+
+void RLA_0x17(Instruction instruction)
+{
+    auto reg = instruction.cpu->read_byte_register_type(instruction.opcode);
+    auto carry = instruction.cpu->is_flag_set(Flags::CarryFlag) ? 1 : 0;
+    auto result = instruction.cpu->get(reg);
+
+    instruction.cpu->clear_flags();
+
+    if ((result & 0x80) != 0) {
+        instruction.cpu->enable_flag(Flags::CarryFlag);
+    }
+
+    result <<= 1;
+    result |= carry;
+
+    instruction.cpu->set(reg, result);
+}
+
 void BIT_0x7C(Instruction instruction)
 {
     instruction.cpu->cycle(4);

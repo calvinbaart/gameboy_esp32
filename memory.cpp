@@ -19,7 +19,7 @@ void Memory::set_rom(File rom)
 {
 }
 
-void Memory::write_video_ram(long position, long bank, long data)
+void Memory::write_video_ram(long position, long bank, uint8_t data)
 {
     if (!bios_enabled) {
         video_ram[0][position - 0x8000] = data & 0xFF;
@@ -27,6 +27,15 @@ void Memory::write_video_ram(long position, long bank, long data)
     }
 
     video_ram[bank][position - 0x8000] = data & 0xFF;
+}
+
+uint8_t Memory::read_video_ram(long position, long bank)
+{
+    if (!bios_enabled) {
+        return video_ram[0][position - 0x8000];
+    }
+
+    return video_ram[bank][position - 0x8000];
 }
 
 long Memory::read8(long position)
@@ -39,45 +48,53 @@ long Memory::read8(long position)
         }
     }
 
-    Serial.println("TODO: finish read8");
+    if (read_registers.find(position) != read_registers.end() && read_registers[position] != nullptr)
+    {
+        return read_registers[position](position);
+    }
 
-    // if (this._registers[position] != undefined)
-    // {
-    //     return this._registers[position].read();
-    // }
-
-    // switch (position & 0xF000)
-    // {
-    //     case 0x8000:
-    //     case 0x9000:
-    //         return this.readVideoRam(position, this._vramBank);
-
-    //     case 0xC000:
-    //         return this.readWorkRam(position, 1);
-
-    //     case 0xD000:
-    //         return this.readWorkRam(position, this._wramBank);
-
-    //     case 0xF000:
-    //         if (position >= 0xFF80 && position <= 0xFFFE)
-    //         {
-    //             return this._hram[position - 0xFF80];
-    //         }
-    //         else if (position >= 0xFE00 && position <= 0xFE9F)
-    //         {
-    //             return this._oamram[position - 0xFE00];
-    //         }
-
-    //     default:
-    //         if (this._controller)
-    //         {
-    //             return this._controller.read(position);
-    //         }
-    //         else
-    //         {
-    //             return this.readInternal8(position);
-    //         }
-    // }
+    switch (position & 0xF000)
+    {
+        case 0x8000:
+        case 0x9000:
+          Serial.println("TODO: implement read video ram");
+          return 0xFF;
+//            return read_video_ram(position, this._vramBank);
+            
+        case 0xC000:
+          Serial.println("TODO: implement read work ram (1)");
+          return 0xFF;
+//            return read_work_ram(position, 1);
+            
+        case 0xD000:
+          Serial.println("TODO: implement read work ram (2)");
+          return 0xFF;
+//            return read_work_ram(position, this._wramBank);
+            
+        case 0xF000:
+          Serial.println("TODO: implement read hram / oam ram");
+          return 0xFF;
+//            if (position >= 0xFF80 && position <= 0xFFFE)
+//            {
+//                return this._hram[position - 0xFF80];
+//            }
+//            else if (position >= 0xFE00 && position <= 0xFE9F)
+//            {
+//                return this._oamram[position - 0xFE00];
+//            }
+    
+        default:
+          Serial.println("TODO: implement read general memory");
+          return 0xFF;
+//            if (this._controller)
+//            {
+//                return this._controller.read(position);
+//            }
+//            else
+//            {
+//                return this.readInternal8(position);
+//            }
+    }
 
     return 0xFF;
 }
@@ -91,11 +108,10 @@ void Memory::write8(long position, long data)
         }
     }
 
-// todo: check registers
-//    if (this._registers[position] !== undefined) {
-//        this._registers[position].write(data);
-//        return;
-//    }
+    if (write_registers.find(position) != write_registers.end() && write_registers[position] != nullptr)
+    {
+        write_registers[position](position, data);
+    }
 
     switch (position & 0xF000) {
         case 0x8000:
@@ -129,4 +145,10 @@ void Memory::write8(long position, long data)
 //                  write_internal8(position, data & 0xFF);
 //            }
     }
+}
+
+void Memory::add_register(long location, long (*callback_read)(long), void (*callback_write)(long, long))
+{
+    read_registers[location] = callback_read;
+    write_registers[location] = callback_write;
 }
