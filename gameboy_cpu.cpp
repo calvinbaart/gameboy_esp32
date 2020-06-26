@@ -23,6 +23,11 @@ void GameboyCPU::set_rom(File rom)
     memory->set_rom(rom);
 }
 
+void GameboyCPU::cycle(long num)
+{
+    tick(num);
+}
+
 Instruction GameboyCPU::fetch_and_decode()
 {
     Instruction instruction;
@@ -36,9 +41,8 @@ Instruction GameboyCPU::fetch_and_decode()
     {
         instruction.opcode = read_u8();
 
-        Serial.println("TODO: implement CB opcodes");
-        // instruction.ticks = _cbopcodes[instruction.opcode][0];
-        // instruction.exec = _cbopcodes[instruction.opcode][1];
+        instruction.ticks = cb_opcode_ticks[instruction.opcode];
+        instruction.exec = cb_opcodes[instruction.opcode];
 
         return instruction;
     }
@@ -72,7 +76,14 @@ bool GameboyCPU::step()
 
         hex[4] = 0;
 
-        display->println("Invalid opcode: " + String(hex));
+        if (instruction.is_cb) {
+            display->println("Invalid CB opcode: " + String(hex));
+        } 
+        else 
+        {
+            display->println("Invalid opcode: " + String(hex));
+        }
+
         display->updateWindow(0, 0, display->width(), display->height());
 
         return false;
@@ -115,6 +126,44 @@ long GameboyCPU::read_u16()
     long result2 = read_u8();
 
     return ((result2 & 0xFF) << 8) | (result1 & 0xFF);
+}
+
+
+long GameboyCPU::read_s8()
+{
+    long num_unsigned = read_u8();
+    long msb_mask = 1 << (8 - 1);
+
+    return (num_unsigned ^ msb_mask) - msb_mask;
+}
+
+long GameboyCPU::read_s16()
+{
+    long num_unsigned = read_u16();
+    long msb_mask = 1 << (16 - 1);
+
+    return (num_unsigned ^ msb_mask) - msb_mask;
+}
+
+long GameboyCPU::increment(RegisterType reg, long num)
+{
+    long tmp = get(reg);
+    tmp += num;
+
+    return set(reg, tmp);
+}
+
+long GameboyCPU::decrement(RegisterType reg, long num)
+{
+    long tmp = get(reg);
+    tmp -= num;
+
+    return set(reg, tmp);
+}
+
+Memory* GameboyCPU::get_memory()
+{
+    return memory;
 }
 
 RegisterType GameboyCPU::read_register_type(long val, bool useAF)
@@ -165,7 +214,7 @@ RegisterType GameboyCPU::read_byte_register_type(long val)
     }
 }
 
-long GameboyCPU::set(RegisterType reg, long val)
+long GameboyCPU::set(RegisterType reg, long value)
 {
     switch (reg)
     {
@@ -202,43 +251,104 @@ long GameboyCPU::set(RegisterType reg, long val)
             return registers.F;
 
         case RegisterType::AF:
-            this._registers16[2] = value;
+            registers.AF = value;
+            registers.A = registers.AF >> 8;
+            registers.F = registers.AF & 0xFF;
 
-            this._registers[Register.A] = this._registers16[2] >> 8;
-            this._registers[Register.F] = this._registers16[2] & 0xFF;
-            
-            return this._registers16[2];
+            return registers.AF;
 
         case RegisterType::SP:
-            this._registers16[0] = value;
-            return this._registers16[0];
+            registers.SP = value;
+            return registers.SP;
 
         case RegisterType::PC:
-            this._registers16[1] = value;
-            return this._registers16[1];
+            registers.PC = value;
+            return registers.PC;
 
         case RegisterType::BC:
-            this._registers16[2] = value;
-
-            this._registers[Register.B] = this._registers16[2] >> 8;
-            this._registers[Register.C] = this._registers16[2] & 0xFF;
-
-            return this._registers16[2];
+            registers.BC = value;
+            registers.B = registers.BC >> 8;
+            registers.C = registers.BC & 0xFF;
+            return registers.BC;
 
         case RegisterType::DE:
-            this._registers16[2] = value;
-
-            this._registers[Register.D] = this._registers16[2] >> 8;
-            this._registers[Register.E] = this._registers16[2] & 0xFF;
-
-            return this._registers16[2];
+            registers.DE = value;
+            registers.D = registers.DE >> 8;
+            registers.E = registers.DE & 0xFF;
+            return registers.DE;
 
         case RegisterType::HL:
-            this._registers16[2] = value;
-
-            this._registers[Register.H] = this._registers16[2] >> 8;
-            this._registers[Register.L] = this._registers16[2] & 0xFF;
-
-            return this._registers16[2];
+            registers.HL = value;
+            registers.H = registers.HL >> 8;
+            registers.L = registers.HL & 0xFF;
+            return registers.HL;
     }
+}
+
+long GameboyCPU::get(RegisterType reg)
+{
+    switch (reg) 
+    {
+        case RegisterType::A:
+            return registers.A;
+        
+        case RegisterType::B:
+            return registers.B;
+
+        case RegisterType::C:
+            return registers.C;
+
+        case RegisterType::D:
+            return registers.D;
+
+        case RegisterType::E:
+            return registers.E;
+
+        case RegisterType::H:
+            return registers.H;
+
+        case RegisterType::L:
+            return registers.L;
+
+        case RegisterType::F:
+            return registers.F;
+        
+        case RegisterType::AF:
+            return (((long)registers.A) << 8) | registers.F;
+
+        case RegisterType::SP:
+            return registers.SP;
+        
+        case RegisterType::PC:
+            return registers.PC;
+        
+        case RegisterType::BC:
+            return (((long)registers.B) << 8) | registers.C;
+
+        case RegisterType::DE:
+            return (((long)registers.D) << 8) | registers.E;
+
+        case RegisterType::HL:
+            return (((long)registers.H) << 8) | registers.L;
+    }
+}
+
+void GameboyCPU::clear_flags()
+{
+    set(RegisterType::F, 0);
+}
+
+void GameboyCPU::enable_flag(Flags flag)
+{
+    set(RegisterType::F, get(RegisterType::F) | flag);
+}
+
+void GameboyCPU::disable_flag(Flags flag)
+{
+    set(RegisterType::F, get(RegisterType::F) & ~flag);
+}
+
+bool GameboyCPU::is_flag_set(Flags flag)
+{
+    return (get(RegisterType::F) & flag) != 0;
 }

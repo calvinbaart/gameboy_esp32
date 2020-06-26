@@ -12,6 +12,12 @@ private:
     uint8_t* bios;
     long bios_length;
     bool bios_enabled;
+
+    uint8_t video_ram[2][0x2000];
+
+    long vram_bank;
+
+    void write_video_ram(long position, long bank, long data);
 public:
     Memory(GameboyCPU* cpu);
 
@@ -19,7 +25,7 @@ public:
     void set_rom(File rom);
 
     long read8(long location);
-    void write8(long byte);
+    void write8(long location, long byte);
 };
 
 #endif

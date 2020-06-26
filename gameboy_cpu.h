@@ -19,7 +19,16 @@ enum class RegisterType
     PC,
     BC,
     DE,
-    HL
+    HL,
+    None
+};
+
+enum Flags {
+    ZeroFlag = 0b10000000,
+    AddSubFlag = 0b01000000,
+    HalfCarryFlag = 0b00100000,
+    CarryFlag = 0b00010000,
+    Unused = 0b00001111
 };
 
 class GameboyCPU;
@@ -58,14 +67,26 @@ public:
     long read_s8();
     long read_s16();
 
+    long increment(RegisterType reg, long num = 1);
+    long decrement(RegisterType reg, long num = 1);
+
+    Memory* get_memory();
+
     RegisterType read_register_type(long val, bool useAF);
     RegisterType read_byte_register_type(long val);
 
     bool step();
 
     long get_cycles();
+    void cycle(long num);
 
-    long set(RegisterType register, long val);
+    long set(RegisterType reg, long value);
+    long get(RegisterType reg);
+
+    void clear_flags();
+    void enable_flag(Flags flag);
+    void disable_flag(Flags flag);
+    bool is_flag_set(Flags flag);
 };
 
 #endif

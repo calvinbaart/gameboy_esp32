@@ -6,7 +6,9 @@
                 "C:\\Program Files (x86)\\Arduino\\libraries\\SD\\src",
                 "C:\\Users\\Calvin Baart\\AppData\\Local\\Arduino15\\packages\\esp32\\tools\\**",
                 "C:\\Users\\Calvin Baart\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.4\\**",
-                "C:\\Users\\Calvin Baart\\Documents\\Arduino\\libraries\\**"
+                "C:\\Users\\Calvin Baart\\Documents\\Arduino\\libraries\\**",
+                "/Users/calvinbaart/Library/Arduino15/packages/esp32/hardware/esp32/1.0.4/**",
+                "/Users/calvinbaart/Library/Arduino15/packages/esp32/tools/**"
             ],
             "forcedInclude": [],
             "intelliSenseMode": "msvc-x64",
