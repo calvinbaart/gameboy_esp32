@@ -352,3 +352,29 @@ bool GameboyCPU::is_flag_set(Flags flag)
 {
     return (get(RegisterType::F) & flag) != 0;
 }
+
+void GameboyCPU::push_stack(long val)
+{
+    auto sp = get(RegisterType::SP);
+
+    sp--;
+    memory->write8(sp, val >> 8);
+    sp--;
+    memory->write8(sp, val & 0xFF);
+
+    set(RegisterType::SP, sp);
+}
+
+long GameboyCPU::pop_stack()
+{
+    auto sp = get(RegisterType::SP);
+
+    auto val1 = memory->read8(sp);
+    sp++;
+    auto val2 = memory->read8(sp);
+    sp++;
+
+    set(RegisterType::SP, sp);
+
+    return (val2 << 8) | val1;
+}

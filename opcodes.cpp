@@ -105,6 +105,69 @@ void LD_0xE2(Instruction instruction)
     instruction.cpu->get_memory()->write8(0xFF00 + instruction.cpu->get(RegisterType::C), instruction.cpu->get(RegisterType::A));
 }
 
+void LD_0x70(Instruction instruction)
+{
+    auto reg = instruction.cpu->read_byte_register_type(instruction.opcode);
+
+    instruction.cpu->get_memory()->write8(instruction.cpu->get(RegisterType::HL), instruction.cpu->get(reg));
+}
+
+void INC_0x04x0Cx14x1Cx24x2Cx3C(Instruction instruction)
+{
+    auto reg = instruction.cpu->read_byte_register_type(instruction.opcode >> 3);
+
+    instruction.cpu->disable_flag(Flags::ZeroFlag);
+    instruction.cpu->disable_flag(Flags::AddSubFlag);
+
+    instruction.cpu->increment(reg);
+
+    auto val = instruction.cpu->get(reg);
+
+    if ((val & 0x0F) == 0x00)
+    {
+        instruction.cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+    else
+    {
+        instruction.cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(instruction.cpu, val);
+}
+
+void LDH_0xE0(Instruction instruction)
+{
+    instruction.cpu->cycle(4);
+
+    auto pos = 0xFF00 + instruction.cpu->read_u8();
+
+    instruction.cpu->get_memory()->write8(pos, instruction.cpu->get(RegisterType::A));
+
+    instruction.cpu->cycle(4);
+    instruction.cpu->cycle(4);
+}
+
+void LD_0x1A(Instruction instruction)
+{
+    instruction.cpu->set(RegisterType::A, instruction.cpu->get_memory()->read8(instruction.cpu->get(RegisterType::DE)));
+}
+
+void CALL_0xCD(Instruction instruction)
+{
+    auto addr = instruction.cpu->read_u16();
+
+    instruction.cpu->push_stack(instruction.cpu->get(RegisterType::PC));
+    instruction.cpu->set(RegisterType::PC, addr);
+}
+
+void LD_0x40(Instruction instruction)
+{
+    auto r1 = instruction.cpu->read_byte_register_type(instruction.opcode >> 3);
+    auto r2 = instruction.cpu->read_byte_register_type(instruction.opcode);
+
+    instruction.cpu->set(r1, instruction.cpu->get(r2));
+}
+
 void BIT_0x7C(Instruction instruction)
 {
     instruction.cpu->cycle(4);

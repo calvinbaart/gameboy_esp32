@@ -87,6 +87,9 @@ public:
     void enable_flag(Flags flag);
     void disable_flag(Flags flag);
     bool is_flag_set(Flags flag);
+
+    void push_stack(long num);
+    long pop_stack();
 };
 
 #endif
