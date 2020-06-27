@@ -41,48 +41,14 @@ void setup()
         cpu.set_bios(dmgBoot);
         dmgBoot.close();
 
+        File rom = SD.open("/pokemon.gb");
+        cpu.set_rom(rom);
+        rom.close();
+
         SD.end();
     }
 
-    display.updateWindow(0, 0, display.width(), display.height());
-}
-
-void printDirectory(File dir, int numTabs)
-{
-    while (true)
-    {
-        File entry = dir.openNextFile();
-        if (!entry)
-        {
-            // no more files
-            break;
-        }
-
-        String str = "";
-        for (uint8_t i = 0; i < numTabs; i++)
-        {
-            str += " ";
-        }
-
-        str += entry.name();
-
-        if (entry.isDirectory())
-        {
-            str += "/";
-            display.println(str);
-            printDirectory(entry, numTabs + 1);
-        }
-        else
-        {
-            // files have sizes, directories do not
-            str += "  ";
-            str += entry.size();
-
-            display.println(str);
-        }
-
-        entry.close();
-    }
+    display.update();
 }
 
 void loop()
@@ -97,6 +63,8 @@ void loop()
     {
         cycles = floor(4194304 / 60.0f) * 2.4f;
     }
+
+    // cycles *= 3;
 
     if (stopEmulation)
     {

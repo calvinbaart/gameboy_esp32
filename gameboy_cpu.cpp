@@ -1,15 +1,72 @@
 #include "gameboy_cpu.h"
 #include "memory.h"
 #include "video.h"
+#include "timer.h"
 #include "opcodes.h"
 
 GameboyCPU* GameboyCPU::instance = nullptr;
+
+long register_read(long position)
+{
+    switch(position)
+    {
+        case 0xFF00: //P1
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::P1);
+
+        case 0xFF01: //SB
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SB);
+
+        case 0xFF02: //SC
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SC);
+
+        case 0xFF0F: //IF
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IF);
+
+        case 0xFFFF: //IE
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IE);
+    }
+}
+
+void register_write(long position, long data)
+{
+    switch(position)
+    {
+        case 0xFF00: //P1
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::P1, data);
+            return;
+
+        case 0xFF01: //SB
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::SB, data);
+            return;
+
+        case 0xFF02: //SC
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::SC, data);
+            return;
+
+        case 0xFF0F: //IF
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::IF, data);
+            return;
+
+        case 0xFFFF: //IE
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::IE, data);
+            return;
+    }
+}
 
 GameboyCPU::GameboyCPU(GxEPD_Class* display) : registers()
 {
     memory = new Memory(this);
     video = new Video(this, display);
+    timer = new Timer(this);
     this->display = display;
+
+    registers.P1 = 0xFF;
+
+    memory->add_register(0xFF00, &::register_read, &::register_write);
+    memory->add_register(0xFF01, &::register_read, &::register_write);
+    memory->add_register(0xFF02, &::register_read, &::register_write);
+    memory->add_register(0xFF0F, &::register_read, &::register_write);
+    memory->add_register(0xFFFF, &::register_read, &::register_write);
 
     instance = this;
 }
@@ -18,6 +75,7 @@ void GameboyCPU::tick(long num_cycles)
 {
     cycles += num_cycles;
     video->tick(num_cycles);
+    timer->tick(num_cycles);
 }
 
 void GameboyCPU::set_bios(File bios)
@@ -62,17 +120,17 @@ Instruction GameboyCPU::fetch_and_decode()
 
 bool GameboyCPU::step()
 {
-    // if (this._waitForInterrupt)
-    // {
-    //     this._cycles += 4;
-    //     this._tickInternal(4);
-    //     this.checkInterrupt();
+    if (wait_for_interrupt)
+    {
+        cycles += 4;
+        tick(4);
+        check_interrupt();
 
-    //     if (this._waitForInterrupt)
-    //     {
-    //         return true;
-    //     }
-    // }
+        if (wait_for_interrupt)
+        {
+            return true;
+        }
+    }
 
     Instruction instruction = fetch_and_decode();
 
@@ -83,7 +141,8 @@ bool GameboyCPU::step()
 
         hex[4] = 0;
 
-        if (instruction.is_cb) {
+        if (instruction.is_cb)
+        {
             display->println("Invalid CB opcode: " + String(hex));
         } 
         else 
@@ -106,7 +165,7 @@ bool GameboyCPU::step()
         tick(instruction.ticks);
     }
 
-    // this.checkInterrupt();
+    check_interrupt();
     return true;
 }
 
@@ -389,4 +448,153 @@ long GameboyCPU::pop_stack()
     set(RegisterType::SP, sp);
 
     return (val2 << 8) | val1;
+}
+
+void GameboyCPU::check_interrupt()
+{
+    if (!enable_interrupts)
+    {
+        return;
+    }
+
+    auto interrupt_flag = registers.IF & registers.IE;
+
+    if (interrupt_flag & (1 << Interrupt::VBlankInterrupt))
+    {
+        fire_interrupt(Interrupt::VBlankInterrupt);
+        registers.IF &= ~(1 << Interrupt::VBlankInterrupt);
+    }
+    else if (interrupt_flag & (1 << Interrupt::LCDStatInterrupt))
+    {
+        fire_interrupt(Interrupt::LCDStatInterrupt);
+        registers.IF &= ~(1 << Interrupt::LCDStatInterrupt);
+    }
+    else if (interrupt_flag & (1 << Interrupt::TimerInterrupt))
+    {
+        fire_interrupt(Interrupt::TimerInterrupt);
+        registers.IF &= ~(1 << Interrupt::TimerInterrupt);
+    }
+    else if (interrupt_flag & (1 << Interrupt::SerialInterrupt))
+    {
+        fire_interrupt(Interrupt::SerialInterrupt);
+        registers.IF &= ~(1 << Interrupt::SerialInterrupt);
+    }
+    else if (interrupt_flag & (1 << Interrupt::JoypadInterrupt))
+    {
+        fire_interrupt(Interrupt::JoypadInterrupt);
+        registers.IF &= ~(1 << Interrupt::JoypadInterrupt);
+    }
+}
+
+uint8_t GameboyCPU::special_register_read(SpecialRegisterType reg)
+{
+    uint8_t val = 0xFF;
+
+    switch (reg)
+    {
+        case SpecialRegisterType::P1:
+            val = registers.P1 | 0xC0;
+            break;
+        
+        case SpecialRegisterType::SB:
+            break;
+        
+        case SpecialRegisterType::SC:
+            val = 0xFE;
+            break;
+        
+        case SpecialRegisterType::IF:
+            val = registers.IF | 0xE0;
+            break;
+
+        case SpecialRegisterType::IE:
+            val = registers.IE;
+            break;
+    }
+
+    return val;
+}
+
+void GameboyCPU::special_register_write(SpecialRegisterType reg, uint8_t data)
+{
+    switch (reg)
+    {
+        case SpecialRegisterType::P1:
+            registers.P1 = data;
+            break;
+
+        case SpecialRegisterType::SB:
+            registers.SB = data;
+            break;
+
+        case SpecialRegisterType::SC:
+            registers.SC = data;
+            break;
+
+        case SpecialRegisterType::IF:
+            registers.IF = data;
+            break;
+
+        case SpecialRegisterType::IE:
+            registers.IE = data;
+            break;
+    }
+
+//    switch (register)
+//    {
+//        case SpecialRegisterType::SC:
+//            if (val === 0x81) {
+//                if (this._specialRegisters[SpecialRegister.SB] === 10) {
+//                    if (this._debugString.trim().length > 0) {
+//                        console.log(this._debugString);
+//                    }
+//
+//                    this._debugString = "";
+//                } else {
+//                    this._debugString += String.fromCharCode(this._specialRegisters[SpecialRegister.SB]);
+//                }
+//            } else {
+//                if (!this._serialStarted && this._network.isConnected()) {
+//                    this._serialStarted = (val & (1 << 7)) ? true : false;
+//                    this._serialClock = (val & (1 << 0)) ? 1 : 0;
+//                }
+//            }
+//            break;
+//        
+//        case SpecialRegisterType::SB:
+//            if (this._serialStarted && this._network.isConnected()) {
+//                this._network.write(val);
+//                this._specialRegisters[SpecialRegister.SB] = this._network.read();
+//            }
+//            break;
+//    }
+}
+
+void GameboyCPU::request_interrupt(Interrupt interrupt)
+{
+    long mask = 1 << interrupt;
+
+    if (mask & registers.IE) {
+        wait_for_interrupt = false;
+    }
+
+    registers.IF |= mask;
+}
+
+void GameboyCPU::fire_interrupt(Interrupt interrupt)
+{
+    enable_interrupts = false;
+
+    push_stack(registers.PC);
+    set(RegisterType::PC, 0x0040 + (interrupt * 8));
+}
+
+void GameboyCPU::set_enable_interrupts(bool enabled)
+{
+    enable_interrupts = enabled;
+}
+
+void GameboyCPU::set_wait_for_interrupt(bool enabled)
+{
+    wait_for_interrupt = enabled;
 }

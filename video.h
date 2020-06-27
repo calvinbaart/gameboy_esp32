@@ -27,6 +27,23 @@ enum VideoMode
     ReadingOAMVRAM
 };
 
+struct Sprite
+{
+    long x;
+    long y;
+    long tile;
+    long flags;
+
+    long vram;
+    bool flip_x;
+    bool flip_y;
+
+    long color_palette;
+    long palette;
+
+    bool priority;
+};
+
 class GameboyCPU;
 class Video
 {
@@ -34,8 +51,10 @@ private:
     GameboyCPU* cpu;
     GxEPD_Class* display;
 
+    Sprite sprites[0x40];
     uint8_t registers[VideoRegisterType::WX + 1];
-    uint8_t framebuffer[160 * 144];
+    uint8_t* framebuffer;
+    uint8_t* framebuffer_numbers;
 
     long cycles, cycles_extra;
     long background_tilemap;
@@ -44,6 +63,8 @@ private:
 
     bool scanline_transferred;
     long vblank;
+
+    int frame_skip;
 public:
     Video(GameboyCPU* cpu, GxEPD_Class* display);
 

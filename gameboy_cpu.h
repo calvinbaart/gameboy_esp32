@@ -4,23 +4,41 @@
 #include "board_config.h"
 #include "registers.h"
 
-enum class RegisterType
+enum RegisterType
 {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    H,
-    L,
-    AF,
-    SP,
-    PC,
-    BC,
-    DE,
-    HL,
-    None
+    A = 1,
+    B = 2,
+    C = 3,
+    D = 4,
+    E = 5,
+    F = 6,
+    H = 7,
+    L = 8,
+    AF = 9,
+    SP = 10,
+    PC = 11,
+    BC = 12,
+    DE = 13,
+    HL = 14,
+    None = 15
+};
+
+enum class SpecialRegisterType
+{
+    P1,
+    SB,
+    SC,
+    IF,
+    IE
+};
+
+enum Interrupt
+{
+    VBlankInterrupt,
+    LCDStatInterrupt,
+    TimerInterrupt,
+    SerialInterrupt,
+    JoypadInterrupt
 };
 
 enum Flags {
@@ -29,6 +47,38 @@ enum Flags {
     HalfCarryFlag = 0b00100000,
     CarryFlag = 0b00010000,
     Unused = 0b00001111
+};
+
+enum class RomType {
+    UNKNOWN = -1,
+    ROMONLY = 0x00,
+    MBC1 = 0x01,
+    MBC1RAM = 0x02,
+    MBC1RAMBATTERY = 0x03,
+    MBC2 = 0x05,
+    MBC2BATTERY = 0x06,
+    ROMRAM = 0x08,
+    ROMRAMBATTERY = 0x09,
+    MMMO1 = 0xB,
+    MMMO1RAM = 0xC,
+    MMMO1RAMBATTERY = 0xD,
+    MBC3TIMERBATTERY = 0xF,
+    MBC3TIMERRAMBATTERY = 0x10,
+    MBC3 = 0x11,
+    MBC3RAM = 0x12,
+    MBC3RAMBATTERY = 0x13,
+    MBC5 = 0x19,
+    MBC5RAM = 0x1A,
+    MBC5RAMBATTERY = 0x1B,
+    MBC5RUMBLE = 0x1C,
+    MBC5RUMBLERAM = 0x1D,
+    MBC5RUMBLERAMBATTERY = 0x1E,
+    MBC6 = 0x20,
+    MBC7SENSORRUMBLERAMBATTERY = 0x22,
+    POCKETCAMERA = 0xFC,
+    BANDAITAMA5 = 0xFD,
+    HUC3 = 0xFE,
+    HUC1RAMBATTERY = 0xFF
 };
 
 class GameboyCPU;
@@ -46,17 +96,22 @@ struct Instruction
 
 class Memory;
 class Video;
+class Timer;
 class GameboyCPU
 {
 private:
     Registers registers;
     Memory* memory;
     Video* video;
+    Timer* timer;
     GxEPD_Class* display;
     long cycles;
 
     void tick(long num_cycles);
     Instruction fetch_and_decode();
+
+    bool enable_interrupts;
+    bool wait_for_interrupt;
 public:
     GameboyCPU(GxEPD_Class* display);
 
@@ -93,6 +148,16 @@ public:
 
     void push_stack(long num);
     long pop_stack();
+
+    uint8_t special_register_read(SpecialRegisterType reg);
+    void special_register_write(SpecialRegisterType reg, uint8_t data);
+
+    void request_interrupt(Interrupt interrupt);
+    void fire_interrupt(Interrupt interrupt);
+    void check_interrupt();
+
+    void set_enable_interrupts(bool enabled);
+    void set_wait_for_interrupt(bool enabled);
 
     static GameboyCPU* instance;
 };

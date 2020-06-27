@@ -17,6 +17,12 @@ struct Registers
     uint16_t BC;
     uint16_t DE;
     uint16_t HL;
+
+    uint8_t P1;
+    uint8_t SB;
+    uint8_t SC;
+    uint8_t IF;
+    uint8_t IE;
 };
 
 #endif
