@@ -6,7 +6,7 @@ Video *Video::instance = nullptr;
 
 static long bit_get(long input, long bit)
 {
-    return input & (1 << bit) ? 1 : 0;
+    return (input & (1 << bit)) ? 1 : 0;
 }
 
 static uint8_t get_color(long palette, long bit, bool transparent)
@@ -21,102 +21,6 @@ static uint8_t get_color(long palette, long bit, bool transparent)
     }
 
     return color;
-}
-
-static long read_register(long location)
-{
-    switch (location)
-    {
-    case 0xFF40: //LCDC
-        return Video::instance->read_register(VideoRegisterType::LCDC);
-
-    case 0xFF41: //STAT
-        return Video::instance->read_register(VideoRegisterType::STAT);
-
-    case 0xFF42: //SCY
-        return Video::instance->read_register(VideoRegisterType::SCY);
-
-    case 0xFF43: //SCX
-        return Video::instance->read_register(VideoRegisterType::SCX);
-
-    case 0xFF44: //LY
-        return Video::instance->read_register(VideoRegisterType::LY);
-
-    case 0xFF45: //LYC
-        return Video::instance->read_register(VideoRegisterType::LYC);
-
-    case 0xFF46: //DMA
-        return Video::instance->read_register(VideoRegisterType::DMA);
-
-    case 0xFF47: //BGP
-        return Video::instance->read_register(VideoRegisterType::BGP);
-
-    case 0xFF48: //OBP0
-        return Video::instance->read_register(VideoRegisterType::OBP0);
-
-    case 0xFF49: //OBP1
-        return Video::instance->read_register(VideoRegisterType::OBP1);
-
-    case 0xFF4A: //WY
-        return Video::instance->read_register(VideoRegisterType::WY);
-
-    case 0xFF4B: //WX
-        return Video::instance->read_register(VideoRegisterType::WX);
-    }
-}
-
-static void write_register(long location, long data)
-{
-    switch (location)
-    {
-    case 0xFF40: //LCDC
-        Video::instance->write_register(VideoRegisterType::LCDC, data);
-        return;
-
-    case 0xFF41: //STAT
-        Video::instance->write_register(VideoRegisterType::STAT, data);
-        return;
-
-    case 0xFF42: //SCY
-        Video::instance->write_register(VideoRegisterType::SCY, data);
-        return;
-
-    case 0xFF43: //SCX
-        Video::instance->write_register(VideoRegisterType::SCX, data);
-        return;
-
-    case 0xFF44: //LY
-        Video::instance->write_register(VideoRegisterType::LY, data);
-        return;
-
-    case 0xFF45: //LYC
-        Video::instance->write_register(VideoRegisterType::LYC, data);
-        return;
-
-    case 0xFF46: //DMA
-        Video::instance->write_register(VideoRegisterType::DMA, data);
-        return;
-
-    case 0xFF47: //BGP
-        Video::instance->write_register(VideoRegisterType::BGP, data);
-        return;
-
-    case 0xFF48: //OBP0
-        Video::instance->write_register(VideoRegisterType::OBP0, data);
-        return;
-
-    case 0xFF49: //OBP1
-        Video::instance->write_register(VideoRegisterType::OBP1, data);
-        return;
-
-    case 0xFF4A: //WY
-        Video::instance->write_register(VideoRegisterType::WY, data);
-        return;
-
-    case 0xFF4B: //WX
-        Video::instance->write_register(VideoRegisterType::WX, data);
-        return;
-    }
 }
 
 Video::Video(GameboyCPU *cpu, GxEPD_Class *display)
@@ -135,20 +39,6 @@ Video::Video(GameboyCPU *cpu, GxEPD_Class *display)
     memset(framebuffer_numbers, 0, 160 * 144 * sizeof(uint8_t));
     memset(registers, 0, (VideoRegisterType::WX + 1) * sizeof(uint8_t));
     memset(sprites, 0, 0x40 * sizeof(Sprite));
-
-    auto memory = cpu->get_memory();
-    memory->add_register(0xFF40, &::read_register, &::write_register);
-    memory->add_register(0xFF41, &::read_register, &::write_register);
-    memory->add_register(0xFF42, &::read_register, &::write_register);
-    memory->add_register(0xFF43, &::read_register, &::write_register);
-    memory->add_register(0xFF44, &::read_register, &::write_register);
-    memory->add_register(0xFF45, &::read_register, &::write_register);
-    memory->add_register(0xFF46, &::read_register, &::write_register);
-    memory->add_register(0xFF47, &::read_register, &::write_register);
-    memory->add_register(0xFF48, &::read_register, &::write_register);
-    memory->add_register(0xFF49, &::read_register, &::write_register);
-    memory->add_register(0xFF4A, &::read_register, &::write_register);
-    memory->add_register(0xFF4B, &::read_register, &::write_register);
 }
 
 void Video::tick(long delta)
@@ -299,7 +189,7 @@ void Video::write_register(VideoRegisterType reg, long value)
                     {
                         auto index = (y * 160) + x;
 
-                        framebuffer[index] = 0xFF;
+                        framebuffer[index] = 0;
                     }
                 }
 
@@ -323,7 +213,7 @@ void Video::render_scanline()
 
 void Video::render()
 {
-    if (frame_skip < 2)
+    if (frame_skip < 5)
     {
         frame_skip++;
         return;
@@ -341,7 +231,7 @@ void Video::render()
 
             long render_y = y * y_scaling;
 
-            if (framebuffer[index] > 0)
+            if (framebuffer[index] > 1)
             {
                 display->writePixel(x, render_y, GxEPD_BLACK);
             }
@@ -382,7 +272,7 @@ void Video::render_window()
     }
 
     auto winY = LY - wy;
-    long tileY = ((long)floor(winY / 8.0f)) % 32;
+    long tileY = winY == 0 ? 0 : ((long)floor(winY / 8.0f)) % 32;
     auto tileYOffset = winY % 8;
 
     long tx = -1;
@@ -401,7 +291,7 @@ void Video::render_window()
             continue;
         }
 
-        long tileX = ((long)floor(x / 8.0f)) % 32;
+        long tileX = x == 0 ? 0 : ((long)floor(x / 8.0f)) % 32;
 
         if (tx != tileX)
         {
@@ -429,6 +319,10 @@ void Video::render_window()
         auto color_num = (bit_get(byte2, bit) << 1) | (bit_get(byte1, bit));
         auto index = (LY * 160) + wx + x;
 
+        if (index >= (160 * 144)) {
+            continue;
+        }
+
         framebuffer[index] = get_color(BGP, color_num, false);
         framebuffer_numbers[index] = color_num;
     }
@@ -449,7 +343,7 @@ void Video::render_background()
     auto base = background_tilemap ? 0x9C00 : 0x9800;
     auto tileBase = active_tileset ? 0x8000 : 0x9000;
 
-    long tileY = ((long)floor((LY + SCY) / 8.0f)) % 32;
+    long tileY = (LY + SCY) == 0 ? 0 : ((long)floor((LY + SCY) / 8.0f)) % 32;
     auto tileYOffset = (LY + SCY) % 8;
 
     long tx = -1;
@@ -463,7 +357,7 @@ void Video::render_background()
 
     for (long x = 0; x < 160; x++)
     {
-        long tileX = ((long)floor((SCX + x) / 8.0f)) % 32;
+        long tileX = (SCX + x) == 0 ? 0 : ((long)floor((SCX + x) / 8.0f)) % 32;
 
         if (tx != tileX)
         {
@@ -497,6 +391,10 @@ void Video::render_background()
 
         auto color_num = (bit_get(byte2, bit) << 1) | (bit_get(byte1, bit));
         auto base_index = (LY * 160) + x;
+
+        if (base_index >= (160 * 144)) {
+            continue;
+        }
 
         framebuffer[base_index] = get_color(BGP, color_num, false);
         framebuffer_numbers[base_index] = color_num;
@@ -547,9 +445,11 @@ void Video::render_sprites()
             }
 
             auto colorNum = (bit_get(byte2, bit) << 1) | (bit_get(byte1, bit));
-
-            auto color = get_color(registers[sprite.palette], colorNum, true);
             auto base_index = (LY * 160) + pixelX;
+
+            if (base_index >= (160 * 144)) {
+                continue;
+            }
 
             if (sprite.priority)
             {
@@ -566,7 +466,7 @@ void Video::render_sprites()
 
 void Video::oam_write(long position, long data)
 {
-    long sprite = floor(position / 4);
+    long sprite = position == 0 ? 0 : floor(position / 4);
     long attrib = position - (sprite * 4);
 
     switch (attrib)

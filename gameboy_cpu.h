@@ -91,7 +91,7 @@ struct Instruction
 
     GameboyCPU* cpu;
 
-    void (*exec)(Instruction);
+    void (*exec)(Instruction*);
 };
 
 class Memory;
@@ -104,11 +104,12 @@ private:
     Memory* memory;
     Video* video;
     Timer* timer;
+    Instruction* instruction;
     GxEPD_Class* display;
     long cycles;
 
     void tick(long num_cycles);
-    Instruction fetch_and_decode();
+    void fetch_and_decode();
 
     bool enable_interrupts;
     bool wait_for_interrupt;
@@ -160,6 +161,8 @@ public:
     void set_wait_for_interrupt(bool enabled);
 
     static GameboyCPU* instance;
+
+    bool bootstrap_completed;
 };
 
 #endif

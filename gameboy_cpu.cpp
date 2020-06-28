@@ -6,68 +6,24 @@
 
 GameboyCPU* GameboyCPU::instance = nullptr;
 
-long register_read(long position)
-{
-    switch(position)
-    {
-        case 0xFF00: //P1
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::P1);
-
-        case 0xFF01: //SB
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SB);
-
-        case 0xFF02: //SC
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SC);
-
-        case 0xFF0F: //IF
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IF);
-
-        case 0xFFFF: //IE
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IE);
-    }
-}
-
-void register_write(long position, long data)
-{
-    switch(position)
-    {
-        case 0xFF00: //P1
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::P1, data);
-            return;
-
-        case 0xFF01: //SB
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::SB, data);
-            return;
-
-        case 0xFF02: //SC
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::SC, data);
-            return;
-
-        case 0xFF0F: //IF
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::IF, data);
-            return;
-
-        case 0xFFFF: //IE
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::IE, data);
-            return;
-    }
-}
-
 GameboyCPU::GameboyCPU(GxEPD_Class* display) : registers()
 {
     memory = new Memory(this);
     video = new Video(this, display);
     timer = new Timer(this);
+    instruction = new Instruction();
+    memset(instruction, 0, sizeof(Instruction));
+
+    instruction->cpu = this;
+
     this->display = display;
 
+    memset(&registers, 0, sizeof(Registers));
+
     registers.P1 = 0xFF;
+    registers.IF = 0;
 
-    memory->add_register(0xFF00, &::register_read, &::register_write);
-    memory->add_register(0xFF01, &::register_read, &::register_write);
-    memory->add_register(0xFF02, &::register_read, &::register_write);
-    memory->add_register(0xFF0F, &::register_read, &::register_write);
-    memory->add_register(0xFFFF, &::register_read, &::register_write);
-
+    bootstrap_completed = false;
     instance = this;
 }
 
@@ -93,29 +49,25 @@ void GameboyCPU::cycle(long num)
     tick(num);
 }
 
-Instruction GameboyCPU::fetch_and_decode()
+void GameboyCPU::fetch_and_decode()
 {
-    Instruction instruction;
-    instruction.cpu = this;
-    instruction.pc = registers.PC;
+    instruction->pc = registers.PC;
 
-    instruction.opcode = read_u8();
-    instruction.is_cb = instruction.opcode == 0xCB;
+    instruction->opcode = read_u8();
+    instruction->is_cb = instruction->opcode == 0xCB;
 
-    if (instruction.is_cb)
+    if (instruction->is_cb)
     {
-        instruction.opcode = read_u8();
+        instruction->opcode = read_u8();
 
-        instruction.ticks = cb_opcode_ticks[instruction.opcode];
-        instruction.exec = cb_opcodes[instruction.opcode];
+        instruction->ticks = cb_opcode_ticks[instruction->opcode];
+        instruction->exec = cb_opcodes[instruction->opcode];
 
-        return instruction;
+        return;
     }
 
-    instruction.ticks = opcode_ticks[instruction.opcode];
-    instruction.exec = opcodes[instruction.opcode];
-
-    return instruction;
+    instruction->ticks = opcode_ticks[instruction->opcode];
+    instruction->exec = opcodes[instruction->opcode];
 }
 
 bool GameboyCPU::step()
@@ -132,16 +84,16 @@ bool GameboyCPU::step()
         }
     }
 
-    Instruction instruction = fetch_and_decode();
+    fetch_and_decode();
 
-    if (instruction.exec == nullptr)
+    if (instruction->exec == nullptr)
     {
         char hex[5];
-        snprintf(hex, sizeof(hex), "0x%02X", instruction.opcode);
+        snprintf(hex, sizeof(hex), "0x%02X", instruction->opcode);
 
         hex[4] = 0;
 
-        if (instruction.is_cb)
+        if (instruction->is_cb)
         {
             display->println("Invalid CB opcode: " + String(hex));
         } 
@@ -155,14 +107,14 @@ bool GameboyCPU::step()
         return false;
     }
 
-    if (instruction.exec != nullptr)
+    if (instruction->exec != nullptr)
     {
-        instruction.exec(instruction);
+        instruction->exec(instruction);
     }
 
-    if (instruction.ticks != 0)
+    if (instruction->ticks != 0)
     {
-        tick(instruction.ticks);
+        tick(instruction->ticks);
     }
 
     check_interrupt();

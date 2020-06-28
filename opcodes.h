@@ -3,101 +3,101 @@
 
 #include "gameboy_cpu.h"
 
-extern void LD_0x01x11x21x31(Instruction instruction);
-extern void XOR_0xA9(Instruction instruction);
-extern void LD_0x32(Instruction instruction);
-extern void JR_0x20(Instruction instruction);
-extern void LD_0x06(Instruction instruction);
-extern void LD_0xE2(Instruction instruction);
-extern void LD_0x70(Instruction instruction);
-extern void LDH_0xE0(Instruction instruction);
-extern void LD_0x1A(Instruction instruction);
-extern void INC_0x04x0Cx14x1Cx24x2Cx3C(Instruction instruction);
-extern void CALL_0xCD(Instruction instruction);
-extern void LD_0x40(Instruction instruction);
-extern void LD_0x22(Instruction instruction);
-extern void PUSH_0xC5(Instruction instruction);
-extern void POP_0xC1(Instruction instruction);
-extern void RLA_0x17(Instruction instruction);
-extern void DEC_0x05x0Dx15x1Dx25x2Dx3D(Instruction instruction);
-extern void INC_0x03x13x23x33(Instruction instruction);
-extern void RET_0xC9(Instruction instruction);
-extern void CP_0xFE(Instruction instruction);
-extern void LD_0xEA(Instruction instruction);
-extern void JR_0x18(Instruction instruction);
-extern void LDH_0xF0(Instruction instruction);
-extern void SUB_0x90(Instruction instruction);
-extern void CP_0xBE(Instruction instruction);
-extern void ADD_0x86(Instruction instruction);
-extern void JP_0xC3(Instruction instruction);
-extern void DI_0xF3(Instruction instruction);
-extern void LD_0x36(Instruction instruction);
-extern void LD_0x2A(Instruction instruction);
-extern void DEC_0x0B(Instruction instruction);
-extern void OR_0xB0(Instruction instruction);
-extern void EI_0xFB(Instruction instruction);
-extern void AND_0xA0(Instruction instruction);
-extern void RET_0xC0(Instruction instruction);
-extern void LD_0xFA(Instruction instruction);
-extern void INC_0x34(Instruction instruction);
-extern void RETI_0xD9(Instruction instruction);
-extern void CPL_0x2F(Instruction instruction);
-extern void AND_0xE6(Instruction instruction);
-extern void RST_0xEF(Instruction instruction);
-extern void ADD_0x81(Instruction instruction);
-extern void ADD_0x09(Instruction instruction);
-extern void LD_0x46(Instruction instruction);
-extern void JP_0xE9(Instruction instruction);
-extern void LD_0x12(Instruction instruction);
-extern void JP_0xC2(Instruction instruction);
-extern void LD_0x02(Instruction instruction);
-extern void RLCA_0x07(Instruction instruction);
-extern void LD_0x08(Instruction instruction);
-extern void LD_0x0A(Instruction instruction);
-extern void RRCA_0x0F(Instruction instruction);
-extern void RRA_0x1F(Instruction instruction);
-extern void DAA_0x27(Instruction instruction);
-extern void DEC_0x35(Instruction instruction);
-extern void SCF_0x37(Instruction instruction);
-extern void LD_0x3A(Instruction instruction);
-extern void CCF_0x3F(Instruction instruction);
-extern void HALT_0x76(Instruction instruction);
-extern void ADC_0x8F(Instruction instruction);
-extern void SUB_0x96(Instruction instruction);
-extern void SBC_0xDE(Instruction instruction);
-extern void AND_0xA6(Instruction instruction);
-extern void XOR_0xAE(Instruction instruction);
-extern void OR_0xB6(Instruction instruction);
-extern void CP_0xBB(Instruction instruction);
-extern void CALL_0xC4(Instruction instruction);
-extern void ADD_0xC6(Instruction instruction);
-extern void SUB_0xD6(Instruction instruction);
-extern void ADD_0xE8(Instruction instruction);
-extern void XOR_0xEE(Instruction instruction);
-extern void LD_0xF2(Instruction instruction);
-extern void OR_0xF6(Instruction instruction);
-extern void LD_0xF8(Instruction instruction);
-extern void LD_0xF9(Instruction instruction);
+extern void LD_0x01x11x21x31(Instruction* instruction);
+extern void XOR_0xA9(Instruction* instruction);
+extern void LD_0x32(Instruction* instruction);
+extern void JR_0x20(Instruction* instruction);
+extern void LD_0x06(Instruction* instruction);
+extern void LD_0xE2(Instruction* instruction);
+extern void LD_0x70(Instruction* instruction);
+extern void LDH_0xE0(Instruction* instruction);
+extern void LD_0x1A(Instruction* instruction);
+extern void INC_0x04x0Cx14x1Cx24x2Cx3C(Instruction* instruction);
+extern void CALL_0xCD(Instruction* instruction);
+extern void LD_0x40(Instruction* instruction);
+extern void LD_0x22(Instruction* instruction);
+extern void PUSH_0xC5(Instruction* instruction);
+extern void POP_0xC1(Instruction* instruction);
+extern void RLA_0x17(Instruction* instruction);
+extern void DEC_0x05x0Dx15x1Dx25x2Dx3D(Instruction* instruction);
+extern void INC_0x03x13x23x33(Instruction* instruction);
+extern void RET_0xC9(Instruction* instruction);
+extern void CP_0xFE(Instruction* instruction);
+extern void LD_0xEA(Instruction* instruction);
+extern void JR_0x18(Instruction* instruction);
+extern void LDH_0xF0(Instruction* instruction);
+extern void SUB_0x90(Instruction* instruction);
+extern void CP_0xBE(Instruction* instruction);
+extern void ADD_0x86(Instruction* instruction);
+extern void JP_0xC3(Instruction* instruction);
+extern void DI_0xF3(Instruction* instruction);
+extern void LD_0x36(Instruction* instruction);
+extern void LD_0x2A(Instruction* instruction);
+extern void DEC_0x0B(Instruction* instruction);
+extern void OR_0xB0(Instruction* instruction);
+extern void EI_0xFB(Instruction* instruction);
+extern void AND_0xA0(Instruction* instruction);
+extern void RET_0xC0(Instruction* instruction);
+extern void LD_0xFA(Instruction* instruction);
+extern void INC_0x34(Instruction* instruction);
+extern void RETI_0xD9(Instruction* instruction);
+extern void CPL_0x2F(Instruction* instruction);
+extern void AND_0xE6(Instruction* instruction);
+extern void RST_0xEF(Instruction* instruction);
+extern void ADD_0x81(Instruction* instruction);
+extern void ADD_0x09(Instruction* instruction);
+extern void LD_0x46(Instruction* instruction);
+extern void JP_0xE9(Instruction* instruction);
+extern void LD_0x12(Instruction* instruction);
+extern void JP_0xC2(Instruction* instruction);
+extern void LD_0x02(Instruction* instruction);
+extern void RLCA_0x07(Instruction* instruction);
+extern void LD_0x08(Instruction* instruction);
+extern void LD_0x0A(Instruction* instruction);
+extern void RRCA_0x0F(Instruction* instruction);
+extern void RRA_0x1F(Instruction* instruction);
+extern void DAA_0x27(Instruction* instruction);
+extern void DEC_0x35(Instruction* instruction);
+extern void SCF_0x37(Instruction* instruction);
+extern void LD_0x3A(Instruction* instruction);
+extern void CCF_0x3F(Instruction* instruction);
+extern void HALT_0x76(Instruction* instruction);
+extern void ADC_0x8F(Instruction* instruction);
+extern void SUB_0x96(Instruction* instruction);
+extern void SBC_0xDE(Instruction* instruction);
+extern void AND_0xA6(Instruction* instruction);
+extern void XOR_0xAE(Instruction* instruction);
+extern void OR_0xB6(Instruction* instruction);
+extern void CP_0xBB(Instruction* instruction);
+extern void CALL_0xC4(Instruction* instruction);
+extern void ADD_0xC6(Instruction* instruction);
+extern void SUB_0xD6(Instruction* instruction);
+extern void ADD_0xE8(Instruction* instruction);
+extern void XOR_0xEE(Instruction* instruction);
+extern void LD_0xF2(Instruction* instruction);
+extern void OR_0xF6(Instruction* instruction);
+extern void LD_0xF8(Instruction* instruction);
+extern void LD_0xF9(Instruction* instruction);
 
 // CB
-extern void BIT_0x7C(Instruction instruction);
-extern void RL_0x11(Instruction instruction);
-extern void SWAP_0x37(Instruction instruction);
-extern void RES_0x87(Instruction instruction);
-extern void SRL_0x38(Instruction instruction);
-extern void RLC_0x00(Instruction instruction);
-extern void RRC_0x08(Instruction instruction);
-extern void RR_0x19(Instruction instruction);
-extern void SLA_0x20(Instruction instruction);
-extern void SRA_0x28(Instruction instruction);
-extern void SET_0xC0(Instruction instruction);
+extern void BIT_0x7C(Instruction* instruction);
+extern void RL_0x11(Instruction* instruction);
+extern void SWAP_0x37(Instruction* instruction);
+extern void RES_0x87(Instruction* instruction);
+extern void SRL_0x38(Instruction* instruction);
+extern void RLC_0x00(Instruction* instruction);
+extern void RRC_0x08(Instruction* instruction);
+extern void RR_0x19(Instruction* instruction);
+extern void SLA_0x20(Instruction* instruction);
+extern void SRA_0x28(Instruction* instruction);
+extern void SET_0xC0(Instruction* instruction);
 
-static void NOP_0x00(Instruction instruction)
+static void NOP_0x00(Instruction* instruction)
 {
     // NOP
 }
 
-static void (*opcodes[])(Instruction) = {
+static void (*opcodes[])(Instruction*) = {
     &NOP_0x00, //0x00
     &LD_0x01x11x21x31, //0x01
     &LD_0x02, //0x02
@@ -615,7 +615,7 @@ static int opcode_ticks[] = {
     16, //0xFF
 };
 
-static void (*cb_opcodes[])(Instruction) = {
+static void (*cb_opcodes[])(Instruction*) = {
     &RLC_0x00, //0x00
     &RLC_0x00, //0x01
     &RLC_0x00, //0x02

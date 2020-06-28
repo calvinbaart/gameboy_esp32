@@ -3,7 +3,6 @@
 
 #include "board_config.h"
 #include "memory_controller.h"
-#include <map>
 
 class GameboyCPU;
 class Memory
@@ -18,14 +17,11 @@ private:
     uint8_t* rom;
     long rom_length;
 
-    uint8_t video_ram[2][0x2000];
-    uint8_t hram[127];
-    uint8_t wram[2][0x1000];
-    uint8_t oam_ram[0xA0];
-    uint8_t ram[0x8000];
-
-    std::map<long, long (*)(long)> read_registers;
-    std::map<long, void (*)(long, long)> write_registers;
+    uint8_t** video_ram;
+    uint8_t* hram;
+    uint8_t** wram;
+    uint8_t* oam_ram;
+    uint8_t* ram;
 
     long vram_bank;
     long wram_bank;
@@ -33,6 +29,9 @@ private:
     IMemoryController* controller;
 
     void create_controller(long type);
+
+    void write_register(long position, long data);
+    long read_register(long position);
 public:
     Memory(GameboyCPU* cpu);
 
@@ -57,8 +56,6 @@ public:
     void write_internal(long position, uint8_t data);
 
     void perform_oam_dma_transfer(long position);
-
-    void add_register(long location, long (*callback_read)(long), void (*callback_write)(long, long));
 };
 
 #endif

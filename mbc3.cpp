@@ -12,23 +12,11 @@ MBC3::MBC3(Memory* memory)
 
     ram_enabled = false;
 
-    latch_clock();
-
-    latch_clock_data = -1;
-}
-
-void MBC3::latch_clock()
-{
-    long delta_millis = millis() - start_millis;
-    hour = floor(delta_millis / 3600000.0f);
-    
-    delta_millis -= hour * 3600000.0f;
-
-    minute = floor(delta_millis / 60000.0f);
-
-    delta_millis -= minute * 60000.0f;
-
-    second = floor(delta_millis / 1000.0f);
+    hour = 0;
+    second = 0;
+    minute = 0;
+    day_lower = 0;
+    day_upper = 0;
 
     second = (second + 40) % 0x3C;
     minute = (minute + 40) % 0x3C;
@@ -37,6 +25,48 @@ void MBC3::latch_clock()
     day_lower = 0;
     day_upper &= ~0x1;
     day_upper &= ~(1 << 7);
+
+    latch_clock();
+
+    latch_clock_data = -1;
+}
+
+void MBC3::latch_clock()
+{
+    long delta_millis = millis() - start_millis;
+
+    day_lower = 0;
+    day_upper &= ~0x1;
+    day_upper &= ~(1 << 7);
+
+    if (delta_millis == 0)
+    {
+        return;
+    }
+
+    hour = floor(delta_millis / 3600000.0f);
+    
+    delta_millis -= hour * 3600000.0f;
+
+    if (delta_millis == 0)
+    {
+        return;
+    }
+
+    minute = floor(delta_millis / 60000.0f);
+
+    delta_millis -= minute * 60000.0f;
+
+    if (delta_millis == 0)
+    {
+        return;
+    }
+
+    second = floor(delta_millis / 1000.0f);
+
+    second = (second + 40) % 0x3C;
+    minute = (minute + 40) % 0x3C;
+    hour = (hour + 12) % 0x18;
 }
 
 long MBC3::read(long position)

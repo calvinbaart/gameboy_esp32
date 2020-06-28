@@ -11,11 +11,6 @@ Timer::Timer(GameboyCPU* cpu)
     div = tima = tma = tac = 0;
     div_cycles = timer_cycles = 0;
 
-    cpu->get_memory()->add_register(0xFF07, &read_tac, &write_tac);
-    cpu->get_memory()->add_register(0xFF04, &read_div, &write_div);
-    cpu->get_memory()->add_register(0xFF05, &read_tima, &write_tima);
-    cpu->get_memory()->add_register(0xFF06, &read_tma, &write_tma);
-
     instance = this;
 }
 
@@ -71,44 +66,4 @@ void Timer::tick(long cycles)
             tima++;
         }
     }
-}
-
-long Timer::read_tac(long location)
-{
-    return Timer::instance->tac | 0b11111000;
-}
-
-long Timer::read_div(long location)
-{
-    return Timer::instance->div;
-}
-
-long Timer::read_tima(long location)
-{
-    return Timer::instance->tima;
-}
-
-long Timer::read_tma(long location)
-{
-    return Timer::instance->tma;
-}
-
-void Timer::write_tac(long location, long data)
-{
-    Timer::instance->tac = data & 0xFF;
-}
-
-void Timer::write_div(long location, long data)
-{
-    Timer::instance->div = 0;
-}
-
-void Timer::write_tima(long location, long data)
-{
-    Timer::instance->tima = data & 0xFF;
-}
-
-void Timer::write_tma(long location, long data)
-{
-    Timer::instance->tma = data & 0xFF;
 }

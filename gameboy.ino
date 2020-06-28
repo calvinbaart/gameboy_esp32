@@ -41,7 +41,7 @@ void setup()
         cpu.set_bios(dmgBoot);
         dmgBoot.close();
 
-        File rom = SD.open("/pokemon.gb");
+        File rom = SD.open("/drmario.gb");
         cpu.set_rom(rom);
         rom.close();
 
@@ -56,6 +56,11 @@ void loop()
     long now = millis();
     long delta = now - previousTime;
     previousTime = now;
+
+    if (delta == 0)
+    {
+        return;
+    }
 
     long cycles = floor(((4194304 * 2.4f) / 1000.0) * delta);
 
@@ -80,6 +85,4 @@ void loop()
             break;
         }
     }
-
-    // todo: gpu update
 }

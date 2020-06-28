@@ -3,16 +3,7 @@
 #include "mbc1.h"
 #include "mbc3.h"
 #include "gameboy_cpu.h"
-
-static long read_register_invalid(long position)
-{
-    return 0xFF;
-}
-
-static void write_register(long position, long data)
-{
-    GameboyCPU::instance->get_memory()->disable_bios();
-}
+#include "timer.h"
 
 Memory::Memory(GameboyCPU *cpu) : bios_enabled(true), vram_bank()
 {
@@ -24,13 +15,26 @@ Memory::Memory(GameboyCPU *cpu) : bios_enabled(true), vram_bank()
     vram_bank = 0;
     wram_bank = 1;
 
-    memset(video_ram, 0xFF, 2 * 0x2000);
+    video_ram = new uint8_t*[2];
+    video_ram[0] = new uint8_t[0x2000];
+    video_ram[1] = new uint8_t[0x2000];
+
+    hram = new uint8_t[127];
+
+    wram = new uint8_t*[2];
+    wram[0] = new uint8_t[0x1000];
+    wram[1] = new uint8_t[0x1000];
+
+    oam_ram = new uint8_t[0xA0];
+    ram = new uint8_t[0x8000];
+
+    memset(video_ram[0], 0xFF, 0x2000);
+    memset(video_ram[1], 0xFF, 0x2000);
     memset(hram, 0xFF, 127);
+    memset(wram[0], 0xFF, 0x1000);
+    memset(wram[1], 0xFF, 0x1000);
     memset(oam_ram, 0xFF, 0x0A);
     memset(ram, 0xFF, 0x8000);
-    memset(wram, 0xFF, 2 * 0x1000);
-
-    add_register(0xFF50, &::read_register_invalid, &::write_register);
 }
 
 void Memory::set_bios(File bios_file)
@@ -79,9 +83,9 @@ long Memory::read8(long position)
         }
     }
 
-    if (read_registers.find(position) != read_registers.end() && read_registers[position] != nullptr)
+    if (position >= 0xFF00 && position <= 0xFF7F)
     {
-        return read_registers[position](position);
+        return read_register(position);
     }
 
     switch (position & 0xF000)
@@ -129,9 +133,10 @@ void Memory::write8(long position, long data)
         }
     }
 
-    if (write_registers.find(position) != write_registers.end() && write_registers[position] != nullptr)
+    if (position >= 0xFF00 && position <= 0xFF7F)
     {
-        write_registers[position](position, data);
+        write_register(position, data);
+        return;
     }
 
     switch (position & 0xF000) {
@@ -162,12 +167,6 @@ void Memory::write8(long position, long data)
                 write_internal(position, data & 0xFF);
             }
     }
-}
-
-void Memory::add_register(long location, long (*callback_read)(long), void (*callback_write)(long, long))
-{
-    read_registers[location] = callback_read;
-    write_registers[location] = callback_write;
 }
 
 uint8_t Memory::read_work_ram(long position, long bank)
@@ -247,6 +246,7 @@ void Memory::create_controller(long type)
         case RomType::MBC1:
         case RomType::MBC1RAM:
         case RomType::MBC1RAMBATTERY:
+            Serial.println("Using MBC1");
             controller = new MBC1(this);
             break;
         
@@ -255,6 +255,7 @@ void Memory::create_controller(long type)
         case RomType::MBC3RAMBATTERY:
         case RomType::MBC3TIMERBATTERY:
         case RomType::MBC3TIMERRAMBATTERY:
+            Serial.println("Using MBC3");
             controller = new MBC3(this);
             break;
         
@@ -269,12 +270,186 @@ void Memory::create_controller(long type)
         
         case RomType::UNKNOWN:
         case RomType::ROMONLY:
-            // this._controller = new RomOnlyMemoryController(this);
+            Serial.println("Using ROMONLY");
             break;
         
         default:
             Serial.println("UNKNOWN ROM TYPE: " + String(type));
-            // this._controller = new RomOnlyMemoryController(this);
             break;
     }
+}
+
+void Memory::write_register(long position, long data)
+{
+    switch (position)
+    {
+        case 0xFF00: // P1
+            // cant write to P1
+            break;
+
+        case 0xFF01: // SB
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::SB, data);
+            break;
+
+        case 0xFF02: // SC
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::SC, data);
+            break;
+
+        case 0xFF0F: // IF
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::IF, data);
+            break;
+
+        case 0xFFFF: // IE
+            GameboyCPU::instance->special_register_write(SpecialRegisterType::IE, data);
+            break;
+
+        case 0xFF07: // Timer TAC
+            Timer::instance->tac = data & 0xFF;
+            break;
+
+        case 0xFF04: // Timer DIV
+            Timer::instance->div = 0;
+            break;
+
+        case 0xFF05: // Timer TIMA
+            Timer::instance->tima = data & 0xFF;
+            break;
+
+        case 0xFF06: // Timer TMA
+            Timer::instance->tma = data & 0xFF;
+            break;
+
+        case 0xFF50: // bios disable
+            GameboyCPU::instance->get_memory()->disable_bios();
+            GameboyCPU::instance->bootstrap_completed = true;
+            break;
+
+        case 0xFF40: //LCDC
+            Video::instance->write_register(VideoRegisterType::LCDC, data);
+            return;
+
+        case 0xFF41: //STAT
+            Video::instance->write_register(VideoRegisterType::STAT, data);
+            return;
+
+        case 0xFF42: //SCY
+            Video::instance->write_register(VideoRegisterType::SCY, data);
+            return;
+
+        case 0xFF43: //SCX
+            Video::instance->write_register(VideoRegisterType::SCX, data);
+            return;
+
+        case 0xFF44: //LY
+            Video::instance->write_register(VideoRegisterType::LY, data);
+            return;
+
+        case 0xFF45: //LYC
+            Video::instance->write_register(VideoRegisterType::LYC, data);
+            return;
+
+        case 0xFF46: //DMA
+            Video::instance->write_register(VideoRegisterType::DMA, data);
+            return;
+
+        case 0xFF47: //BGP
+            Video::instance->write_register(VideoRegisterType::BGP, data);
+            return;
+
+        case 0xFF48: //OBP0
+            Video::instance->write_register(VideoRegisterType::OBP0, data);
+            return;
+
+        case 0xFF49: //OBP1
+            Video::instance->write_register(VideoRegisterType::OBP1, data);
+            return;
+
+        case 0xFF4A: //WY
+            Video::instance->write_register(VideoRegisterType::WY, data);
+            return;
+
+        case 0xFF4B: //WX
+            Video::instance->write_register(VideoRegisterType::WX, data);
+            return;
+
+        // default:
+        //     Serial.println("unknown write register: " + String(position));
+    }
+}
+
+long Memory::read_register(long position)
+{
+    switch (position)
+    {
+        case 0xFF00: // P1
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::P1);
+
+        case 0xFF01: // SB
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SB);
+
+        case 0xFF02: // SC
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SC);
+
+        case 0xFF0F: // IF
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IF);
+
+        case 0xFFFF: // IE
+            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IE);
+
+        case 0xFF07: // Timer TAC
+            return Timer::instance->tac | 0b11111000;
+
+        case 0xFF04: // Timer DIV
+            return Timer::instance->div;
+
+        case 0xFF05: // Timer TIMA
+            return Timer::instance->tima;
+
+        case 0xFF06: // Timer TMA
+            return Timer::instance->tma;
+
+        case 0xFF50: // bios disable
+            return 0xFF;
+
+        case 0xFF40: //LCDC
+            return Video::instance->read_register(VideoRegisterType::LCDC);
+
+        case 0xFF41: //STAT
+            return Video::instance->read_register(VideoRegisterType::STAT);
+
+        case 0xFF42: //SCY
+            return Video::instance->read_register(VideoRegisterType::SCY);
+
+        case 0xFF43: //SCX
+            return Video::instance->read_register(VideoRegisterType::SCX);
+
+        case 0xFF44: //LY
+            return Video::instance->read_register(VideoRegisterType::LY);
+
+        case 0xFF45: //LYC
+            return Video::instance->read_register(VideoRegisterType::LYC);
+
+        case 0xFF46: //DMA
+            return Video::instance->read_register(VideoRegisterType::DMA);
+
+        case 0xFF47: //BGP
+            return Video::instance->read_register(VideoRegisterType::BGP);
+
+        case 0xFF48: //OBP0
+            return Video::instance->read_register(VideoRegisterType::OBP0);
+
+        case 0xFF49: //OBP1
+            return Video::instance->read_register(VideoRegisterType::OBP1);
+
+        case 0xFF4A: //WY
+            return Video::instance->read_register(VideoRegisterType::WY);
+
+        case 0xFF4B: //WX
+            return Video::instance->read_register(VideoRegisterType::WX);
+
+        // default:
+        //     Serial.println("unknown read register: " + String(position));
+    }
+
+    return 0xFF;
 }
