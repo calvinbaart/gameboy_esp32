@@ -5,12 +5,12 @@
 #include "gameboy_cpu.h"
 #include "timer.h"
 
+#define ROM_BLOCK_SIZE 65536
 Memory::Memory(GameboyCPU *cpu) : bios_enabled(true), vram_bank()
 {
     this->cpu = cpu;
 
     controller = nullptr;
-    rom = nullptr;
 
     vram_bank = 0;
     wram_bank = 1;
@@ -35,6 +35,10 @@ Memory::Memory(GameboyCPU *cpu) : bios_enabled(true), vram_bank()
     memset(wram[1], 0xFF, 0x1000);
     memset(oam_ram, 0xFF, 0x0A);
     memset(ram, 0xFF, 0x8000);
+
+    current_block = nullptr;
+    current_block_index = -1;
+    current_block_changed = false;
 }
 
 void Memory::set_bios(File bios_file)
@@ -44,13 +48,81 @@ void Memory::set_bios(File bios_file)
     bios_file.read(bios, bios_length);
 }
 
+long Memory::switch_block(long location)
+{
+    long index = location / ROM_BLOCK_SIZE;
+    long sub = location - (index * ROM_BLOCK_SIZE);
+
+    if (current_block == nullptr)
+    {
+        current_block = new uint8_t[ROM_BLOCK_SIZE];
+    }
+
+    if (index != current_block_index)
+    {
+        if (current_block_index != -1 && current_block_changed)
+        {
+            long size = rom_file.size() - (current_block_index * ROM_BLOCK_SIZE);
+
+            if (size > ROM_BLOCK_SIZE) {
+                size = ROM_BLOCK_SIZE;
+            }
+
+            rom_file.seek(current_block_index * ROM_BLOCK_SIZE);
+            rom_file.write(current_block, size);
+            current_block_changed = false;
+        }
+
+        long size = rom_file.size() - (index * ROM_BLOCK_SIZE);
+
+        if (size > ROM_BLOCK_SIZE) {
+            size = ROM_BLOCK_SIZE;
+        }
+
+        memset(current_block, 0, ROM_BLOCK_SIZE);
+        rom_file.seek(index * ROM_BLOCK_SIZE);
+        rom_file.read(current_block, size);
+
+        current_block_index = index;
+    }
+
+    return sub;
+}
+
+uint8_t Memory::read_byte(long location)
+{
+    long sub = switch_block(location);
+
+    return current_block[sub];
+}
+
+void Memory::write_byte(long location, uint8_t data)
+{
+    long sub = switch_block(location);
+
+    current_block[sub] = data;
+    current_block_changed = true;
+}
+
 void Memory::set_rom(File rom_file)
 {
-    rom_length = rom_file.size();
-    rom = new uint8_t[rom_length];
-    rom_file.read(rom, rom_length);
+    String name(rom_file.name());
+    File ram = SD.open("/" + name + String(".ram"), FILE_WRITE);
 
-    long rom_type = rom[0x147];
+    int data;
+    while ((data = rom_file.read()) >= 0) {
+        ram.write(data);
+    }
+
+    rom_file.close();
+    ram.close();
+
+    ram = SD.open("/" + name + String(".ram"), "rw");
+
+    this->rom_file = ram;
+    this->rom_length = ram.size();
+
+    long rom_type = read_byte(0x147);
     create_controller(rom_type);
 }
 
@@ -83,9 +155,10 @@ long Memory::read8(long position)
         }
     }
 
-    if (position >= 0xFF00 && position <= 0xFF7F)
-    {
-        return read_register(position);
+    long reg = read_register(position);
+
+    if (reg >= 0) {
+        return reg;
     }
 
     switch (position & 0xF000)
@@ -133,9 +206,7 @@ void Memory::write8(long position, long data)
         }
     }
 
-    if (position >= 0xFF00 && position <= 0xFF7F)
-    {
-        write_register(position, data);
+    if (write_register(position, data)) {
         return;
     }
 
@@ -184,11 +255,11 @@ uint8_t Memory::read_work_ram(long position, long bank)
 
 uint8_t Memory::read_internal(long position)
 {
-    if (rom == nullptr || position >= rom_length) {
+    if (!rom_file || position >= rom_file.size()) {
         return 0xFF;
     }
 
-    return rom[position];
+    return read_byte(position);
 }
 
 void Memory::write_work_ram(long position, long bank, uint8_t data)
@@ -208,11 +279,11 @@ void Memory::write_work_ram(long position, long bank, uint8_t data)
 
 void Memory::write_internal(long position, uint8_t data)
 {
-    if (rom == nullptr) {
+    if (!rom_file) {
         return;
     }
 
-    rom[position] = data & 0xFF;
+    write_byte(position, data);
 }
 
 void Memory::perform_oam_dma_transfer(long position)
@@ -279,102 +350,104 @@ void Memory::create_controller(long type)
     }
 }
 
-void Memory::write_register(long position, long data)
+bool Memory::write_register(long position, long data)
 {
     switch (position)
     {
         case 0xFF00: // P1
             // cant write to P1
-            break;
+            return true;
 
         case 0xFF01: // SB
             GameboyCPU::instance->special_register_write(SpecialRegisterType::SB, data);
-            break;
+            return true;
 
         case 0xFF02: // SC
             GameboyCPU::instance->special_register_write(SpecialRegisterType::SC, data);
-            break;
+            return true;
 
         case 0xFF0F: // IF
             GameboyCPU::instance->special_register_write(SpecialRegisterType::IF, data);
-            break;
+            return true;
 
         case 0xFFFF: // IE
             GameboyCPU::instance->special_register_write(SpecialRegisterType::IE, data);
-            break;
+            return true;
 
         case 0xFF07: // Timer TAC
             Timer::instance->tac = data & 0xFF;
-            break;
+            return true;
 
         case 0xFF04: // Timer DIV
             Timer::instance->div = 0;
-            break;
+            return true;
 
         case 0xFF05: // Timer TIMA
             Timer::instance->tima = data & 0xFF;
-            break;
+            return true;
 
         case 0xFF06: // Timer TMA
             Timer::instance->tma = data & 0xFF;
-            break;
+            return true;
 
         case 0xFF50: // bios disable
             GameboyCPU::instance->get_memory()->disable_bios();
             GameboyCPU::instance->bootstrap_completed = true;
-            break;
+            return true;
 
         case 0xFF40: //LCDC
             Video::instance->write_register(VideoRegisterType::LCDC, data);
-            return;
+            return true;
 
         case 0xFF41: //STAT
             Video::instance->write_register(VideoRegisterType::STAT, data);
-            return;
+            return true;
 
         case 0xFF42: //SCY
             Video::instance->write_register(VideoRegisterType::SCY, data);
-            return;
+            return true;
 
         case 0xFF43: //SCX
             Video::instance->write_register(VideoRegisterType::SCX, data);
-            return;
+            return true;
 
         case 0xFF44: //LY
             Video::instance->write_register(VideoRegisterType::LY, data);
-            return;
+            return true;
 
         case 0xFF45: //LYC
             Video::instance->write_register(VideoRegisterType::LYC, data);
-            return;
+            return true;
 
         case 0xFF46: //DMA
             Video::instance->write_register(VideoRegisterType::DMA, data);
-            return;
+            return true;
 
         case 0xFF47: //BGP
             Video::instance->write_register(VideoRegisterType::BGP, data);
-            return;
+            return true;
 
         case 0xFF48: //OBP0
             Video::instance->write_register(VideoRegisterType::OBP0, data);
-            return;
+            return true;
 
         case 0xFF49: //OBP1
             Video::instance->write_register(VideoRegisterType::OBP1, data);
-            return;
+            return true;
 
         case 0xFF4A: //WY
             Video::instance->write_register(VideoRegisterType::WY, data);
-            return;
+            return true;
 
         case 0xFF4B: //WX
             Video::instance->write_register(VideoRegisterType::WX, data);
-            return;
+            return true;
 
         // default:
         //     Serial.println("unknown write register: " + String(position));
     }
+
+    return false;
 }
 
 long Memory::read_register(long position)
@@ -451,5 +524,5 @@ long Memory::read_register(long position)
         //     Serial.println("unknown read register: " + String(position));
     }
 
-    return 0xFF;
+    return -1;
 }

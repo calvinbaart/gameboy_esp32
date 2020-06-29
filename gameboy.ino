@@ -8,6 +8,7 @@ long previousTime;
 bool stopEmulation;
 
 GameboyCPU cpu(&display);
+SPIClass sdSPI(VSPI);
 
 void setup()
 {
@@ -22,7 +23,6 @@ void setup()
     display.setFont(&FreeMonoBold9pt7b);
     display.setCursor(0, 16);
 
-    SPIClass sdSPI(VSPI);
     sdSPI.begin(SDCARD_CLK, SDCARD_MISO, SDCARD_MOSI, SDCARD_SS);
 
     if (!SD.begin(SDCARD_SS, sdSPI))
@@ -41,11 +41,8 @@ void setup()
         cpu.set_bios(dmgBoot);
         dmgBoot.close();
 
-        File rom = SD.open("/drmario.gb");
+        File rom = SD.open("/pokemon.gb");
         cpu.set_rom(rom);
-        rom.close();
-
-        SD.end();
     }
 
     display.update();

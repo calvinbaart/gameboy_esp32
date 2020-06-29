@@ -223,6 +223,8 @@ void Video::render()
 
     float y_scaling = 122.0f / 144.0f;
 
+    long start_x = (display->width() / 2.0f) - 80;
+
     for (long x = 0; x < 160; x++)
     {
         for (long y = 0; y < 144; y++)
@@ -231,18 +233,21 @@ void Video::render()
 
             long render_y = y * y_scaling;
 
-            if (framebuffer[index] > 1)
+            if (framebuffer[index] >= 2)
             {
-                display->writePixel(x, render_y, GxEPD_BLACK);
+                display->writePixel(start_x + x, render_y, GxEPD_BLACK);
             }
             else
             {
-                display->writePixel(x, render_y, GxEPD_WHITE);
+                display->writePixel(start_x + x, render_y, GxEPD_WHITE);
             }
         }
     }
 
-    display->updateWindow(0, 0, 160, 122);
+    display->fillRect(0, 0, start_x, display->height(), GxEPD_BLACK);
+    display->fillRect(start_x + 160, 0, display->width() - (start_x + 160), display->height(), GxEPD_BLACK);
+
+    display->updateWindow(0, 0, display->width(), display->height());
 }
 
 void Video::render_window()

@@ -23,6 +23,11 @@ GameboyCPU::GameboyCPU(GxEPD_Class* display) : registers()
     registers.P1 = 0xFF;
     registers.IF = 0;
 
+    set(RegisterType::SP, 0xFFFE);
+    set(RegisterType::BC, 0x0013);
+    set(RegisterType::DE, 0x00D8);
+    set(RegisterType::HL, 0x014D);
+
     bootstrap_completed = false;
     instance = this;
 }
@@ -409,7 +414,7 @@ void GameboyCPU::check_interrupt()
         return;
     }
 
-    auto interrupt_flag = registers.IF & registers.IE;
+    uint8_t interrupt_flag = registers.IF & registers.IE;
 
     if (interrupt_flag & (1 << Interrupt::VBlankInterrupt))
     {

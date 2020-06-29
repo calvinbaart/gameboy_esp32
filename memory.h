@@ -9,12 +9,15 @@ class Memory
 {
 private:
     GameboyCPU* cpu;
+    File rom_file;
 
     uint8_t* bios;
     long bios_length;
     bool bios_enabled;
 
-    uint8_t* rom;
+    uint8_t* current_block;
+    long current_block_index;
+    bool current_block_changed;
     long rom_length;
 
     uint8_t** video_ram;
@@ -30,8 +33,12 @@ private:
 
     void create_controller(long type);
 
-    void write_register(long position, long data);
+    bool write_register(long position, long data);
     long read_register(long position);
+
+    uint8_t read_byte(long location);
+    void write_byte(long location, uint8_t data);
+    long switch_block(long location);
 public:
     Memory(GameboyCPU* cpu);
 
