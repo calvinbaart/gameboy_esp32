@@ -43,6 +43,9 @@ void setup()
 
         File rom = SD.open("/pokemon.gb");
         cpu.set_rom(rom);
+        rom.close();
+
+        SD.end();
     }
 
     display.update();

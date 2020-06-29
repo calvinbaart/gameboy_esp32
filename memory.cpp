@@ -4,6 +4,7 @@
 #include "mbc3.h"
 #include "gameboy_cpu.h"
 #include "timer.h"
+#include <esp_partition.h>
 
 #define ROM_BLOCK_SIZE 65536
 Memory::Memory(GameboyCPU *cpu) : bios_enabled(true), vram_bank()
@@ -35,10 +36,6 @@ Memory::Memory(GameboyCPU *cpu) : bios_enabled(true), vram_bank()
     memset(wram[1], 0xFF, 0x1000);
     memset(oam_ram, 0xFF, 0x0A);
     memset(ram, 0xFF, 0x8000);
-
-    current_block = nullptr;
-    current_block_index = -1;
-    current_block_changed = false;
 }
 
 void Memory::set_bios(File bios_file)
@@ -48,85 +45,38 @@ void Memory::set_bios(File bios_file)
     bios_file.read(bios, bios_length);
 }
 
-long Memory::switch_block(long location)
+bool Memory::set_rom(File rom_file)
 {
-    long index = location / ROM_BLOCK_SIZE;
-    long sub = location - (index * ROM_BLOCK_SIZE);
+    const esp_partition_t* partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, (esp_partition_subtype_t)0x40, "romdata");
 
-    if (current_block == nullptr)
+    esp_partition_erase_range(partition, 0, 2 * 1024 * 1024);
+
+    const size_t buffer_size = 32 * 1024;
+    uint8_t* rom_buffer = (uint8_t*)calloc(buffer_size, 1);
+
+    size_t offset = 0;
+    while(rom_file.available())
     {
-        current_block = new uint8_t[ROM_BLOCK_SIZE];
+        rom_file.read(rom_buffer, buffer_size);
+        esp_partition_write(partition, offset, (const void*)rom_buffer, buffer_size);
+        offset += buffer_size;
     }
 
-    if (index != current_block_index)
-    {
-        if (current_block_index != -1 && current_block_changed)
-        {
-            long size = rom_file.size() - (current_block_index * ROM_BLOCK_SIZE);
+    free(rom_buffer);
 
-            if (size > ROM_BLOCK_SIZE) {
-                size = ROM_BLOCK_SIZE;
-            }
+    spi_flash_mmap_handle_t hrom;
+    esp_partition_mmap(partition, 0, 2 * 1024 * 1024, SPI_FLASH_MMAP_DATA, (const void**)&(this->rom), &hrom);
 
-            rom_file.seek(current_block_index * ROM_BLOCK_SIZE);
-            rom_file.write(current_block, size);
-            current_block_changed = false;
-        }
+    char* rom_name = (char*)&rom[0x134];
+    long rom_type = rom[0x147];
 
-        long size = rom_file.size() - (index * ROM_BLOCK_SIZE);
-
-        if (size > ROM_BLOCK_SIZE) {
-            size = ROM_BLOCK_SIZE;
-        }
-
-        memset(current_block, 0, ROM_BLOCK_SIZE);
-        rom_file.seek(index * ROM_BLOCK_SIZE);
-        rom_file.read(current_block, size);
-
-        current_block_index = index;
-    }
-
-    return sub;
-}
-
-uint8_t Memory::read_byte(long location)
-{
-    long sub = switch_block(location);
-
-    return current_block[sub];
-}
-
-void Memory::write_byte(long location, uint8_t data)
-{
-    long sub = switch_block(location);
-
-    current_block[sub] = data;
-    current_block_changed = true;
-}
-
-void Memory::set_rom(File rom_file)
-{
-    String name(rom_file.name());
-    File ram = SD.open("/" + name + String(".ram"), FILE_WRITE);
-
-    int data;
-    while ((data = rom_file.read()) >= 0) {
-        ram.write(data);
-    }
-
-    rom_file.close();
-    ram.close();
-
-    ram = SD.open("/" + name + String(".ram"), "rw");
-
-    this->rom_file = ram;
-    this->rom_length = ram.size();
-
-    long rom_type = read_byte(0x147);
+    Serial.println("rom name=" + String(rom_name));
     create_controller(rom_type);
+
+    return true;
 }
 
-void Memory::write_video_ram(long position, long bank, uint8_t data)
+void Memory::write_video_ram(long position, long bank, long data)
 {
     if (!bios_enabled) {
         video_ram[0][position - 0x8000] = data & 0xFF;
@@ -136,7 +86,7 @@ void Memory::write_video_ram(long position, long bank, uint8_t data)
     video_ram[bank][position - 0x8000] = data & 0xFF;
 }
 
-uint8_t Memory::read_video_ram(long position, long bank)
+long Memory::read_video_ram(long position, long bank)
 {
     if (!bios_enabled) {
         return video_ram[0][position - 0x8000];
@@ -240,7 +190,7 @@ void Memory::write8(long position, long data)
     }
 }
 
-uint8_t Memory::read_work_ram(long position, long bank)
+long Memory::read_work_ram(long position, long bank)
 {
     switch (position & 0xF000)
     {
@@ -253,16 +203,16 @@ uint8_t Memory::read_work_ram(long position, long bank)
     }
 }
 
-uint8_t Memory::read_internal(long position)
+long Memory::read_internal(long position)
 {
-    if (!rom_file || position >= rom_file.size()) {
+    if (!rom) {
         return 0xFF;
     }
 
-    return read_byte(position);
+    return rom[position];
 }
 
-void Memory::write_work_ram(long position, long bank, uint8_t data)
+void Memory::write_work_ram(long position, long bank, long data)
 {
     switch (position & 0xF000)
     {
@@ -277,13 +227,9 @@ void Memory::write_work_ram(long position, long bank, uint8_t data)
     }
 }
 
-void Memory::write_internal(long position, uint8_t data)
+void Memory::write_internal(long position, long data)
 {
-    if (!rom_file) {
-        return;
-    }
-
-    write_byte(position, data);
+    Serial.printf("loc: 0x%02x, value: %02x\n", position, data);
 }
 
 void Memory::perform_oam_dma_transfer(long position)
@@ -307,7 +253,7 @@ long Memory::read_ram8(long location)
 
 void Memory::write_ram8(long location, long byte)
 {
-    ram[location] = byte & 0xFF;
+    ram[location] = byte;
 }
 
 void Memory::create_controller(long type)
@@ -447,7 +393,7 @@ bool Memory::write_register(long position, long data)
         //     Serial.println("unknown write register: " + String(position));
     }
 
-    return false;
+    return position >= 0xFF00 && position <= 0xFF7F;
 }
 
 long Memory::read_register(long position)
@@ -522,6 +468,10 @@ long Memory::read_register(long position)
 
         // default:
         //     Serial.println("unknown read register: " + String(position));
+    }
+
+    if (position >= 0xFF00 && position <= 0xFF7F) {
+        return 0xFF;
     }
 
     return -1;
