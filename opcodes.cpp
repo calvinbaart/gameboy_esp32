@@ -4,85 +4,120 @@
 
 void toggle_zero_flag(GameboyCPU* cpu, long result)
 {
-    if ((result & 0xFF) == 0)
-    {
-        cpu->enable_flag(Flags::ZeroFlag);
-    }
-    else
-    {
-        cpu->disable_flag(Flags::ZeroFlag);
-    }
+    cpu->set_flag(Flags::ZeroFlag, (result & 0xFF) == 0);
 }
 
-void BIT_Impl(RegisterType reg, long bit, GameboyCPU* cpu)
+void BIT_Impl(long reg, long bit, GameboyCPU* cpu)
 {
     long value = 0;
     
-    if (reg == RegisterType::None)
+    switch (reg)
     {
-        value = cpu->get_memory()->read8(cpu->get(RegisterType::HL));
+        case RegisterType::B:
+            value = cpu->registers.B;
+            break;
 
-        cpu->cycle(4);
-    }
-    else
-    {
-        value = cpu->get(reg);
+        case RegisterType::C:
+            value = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            value = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            value = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            value = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            value = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            value = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            value = cpu->registers.A;
+            break;
     }
 
     toggle_zero_flag(cpu, ((value >> bit) & 0x01));
+
     cpu->enable_flag(Flags::HalfCarryFlag);
     cpu->disable_flag(Flags::AddSubFlag);
 
-    cpu->cycle(4);
+    cpu->tick(4);
 }
 
 void CP(long val, GameboyCPU* cpu)
 {
     cpu->clear_flags();
+
+    long A = cpu->registers.A;
+
     cpu->enable_flag(Flags::AddSubFlag);
-
-    auto A = cpu->get(RegisterType::A);
-
-    if (val == A)
-    {
-        cpu->enable_flag(Flags::ZeroFlag);
-    }
-
-    if (A < val)
-    {
-        cpu->enable_flag(Flags::CarryFlag);
-    }
-
-    if (((A - val) & 0xF) > (A & 0xF))
-    {
-        cpu->enable_flag(Flags::HalfCarryFlag);
-    }
+    cpu->set_flag(Flags::ZeroFlag, val == A);
+    cpu->set_flag(Flags::CarryFlag, (A - val) < 0);
+    cpu->set_flag(Flags::HalfCarryFlag, ((A - val) & 0xF) > (A & 0xF));
 }
 
 void SUB(long reg, bool use_carry, GameboyCPU* cpu, bool is_number)
 {
-    long val = 0;
+    long value = 0;
 
     cpu->enable_flag(Flags::AddSubFlag);
 
     if (is_number)
     {
-        val = reg;
-    }
-    else if (reg == RegisterType::None)
-    {
-        auto tmp = cpu->get_memory()->read8(cpu->get(RegisterType::HL));
-
-        val = tmp;
+        value = reg;
     }
     else
     {
-        val = cpu->get((RegisterType)reg);
+        switch (reg)
+        {
+            case RegisterType::B:
+                value = cpu->registers.B;
+                break;
+
+            case RegisterType::C:
+                value = cpu->registers.C;
+                break;
+
+            case RegisterType::D:
+                value = cpu->registers.D;
+                break;
+
+            case RegisterType::E:
+                value = cpu->registers.E;
+                break;
+
+            case RegisterType::H:
+                value = cpu->registers.H;
+                break;
+
+            case RegisterType::L:
+                value = cpu->registers.L;
+                break;
+
+            case RegisterType::HL:
+                value = cpu->memory.read8(cpu->registers.HL);
+                break;
+
+            case RegisterType::A:
+                value = cpu->registers.A;
+                break;
+        }
     }
 
-    auto A = cpu->get(RegisterType::A);
-    auto extra = (use_carry && cpu->is_flag_set(Flags::CarryFlag)) ? 1 : 0;
-    auto result = A - val - extra;
+    long A = cpu->registers.A;
+    long extra = (use_carry && cpu->is_flag_set(Flags::CarryFlag)) ? 1 : 0;
+    long result = A - value - extra;
 
     if (result < 0)
     {
@@ -93,36 +128,66 @@ void SUB(long reg, bool use_carry, GameboyCPU* cpu, bool is_number)
         cpu->disable_flag(Flags::CarryFlag);
     }
 
-    if ((A & 0xF) - (val & 0xF) - extra < 0) {
+    if ((A & 0xF) - (value & 0xF) - extra < 0) {
         cpu->enable_flag(Flags::HalfCarryFlag);
     } else {
         cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    cpu->set(RegisterType::A, result);
+    cpu->registers.A = result;
+
     toggle_zero_flag(cpu, result);
 }
 
 void ADD(long reg, bool add_carry, GameboyCPU* cpu, bool is_number)
 {
-    long val = 0;
+    long value = 0;
 
     if (is_number)
     {
-        val = reg;
+        value = reg;
     }
-    else if (reg == RegisterType::None)
-    {
-        val = cpu->get_memory()->read8(cpu->get(RegisterType::HL));
-    } 
     else
     {
-        val = cpu->get((RegisterType)reg);
+        switch (reg)
+        {
+            case RegisterType::B:
+                value = cpu->registers.B;
+                break;
+
+            case RegisterType::C:
+                value = cpu->registers.C;
+                break;
+
+            case RegisterType::D:
+                value = cpu->registers.D;
+                break;
+
+            case RegisterType::E:
+                value = cpu->registers.E;
+                break;
+
+            case RegisterType::H:
+                value = cpu->registers.H;
+                break;
+
+            case RegisterType::L:
+                value = cpu->registers.L;
+                break;
+
+            case RegisterType::HL:
+                value = cpu->memory.read8(cpu->registers.HL);
+                break;
+
+            case RegisterType::A:
+                value = cpu->registers.A;
+                break;
+        }
     }
 
-    auto A = cpu->get(RegisterType::A);
-    auto extra = (add_carry && cpu->is_flag_set(Flags::CarryFlag)) ? 1 : 0;
-    auto result = A + val + extra;
+    long A = cpu->registers.A;
+    long extra = (add_carry && cpu->is_flag_set(Flags::CarryFlag)) ? 1 : 0;
+    long result = A + value + extra;
 
     if (result > 0xFF)
     {
@@ -133,731 +198,1702 @@ void ADD(long reg, bool add_carry, GameboyCPU* cpu, bool is_number)
         cpu->disable_flag(Flags::CarryFlag);
     }
 
-    if ((A & 0xF) + (val & 0xF) + extra > 0xF) {
+    if ((A & 0xF) + (value & 0xF) + extra > 0xF) {
         cpu->enable_flag(Flags::HalfCarryFlag);
     } else {
         cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    cpu->set(RegisterType::A, result);
+    cpu->registers.A = result;
     toggle_zero_flag(cpu, result);
 
     cpu->disable_flag(Flags::AddSubFlag);
 }
 
-void ADD_16(RegisterType register1, long register2, GameboyCPU* cpu, bool is_number)
-{
-    cpu->clear_flags();
-    
-    long val = 0;
-    if (!is_number)
-    {
-        val = cpu->get((RegisterType)register2);
-    }
-    else
-    {
-        val = register2;
-    }
-
-    auto value1 = cpu->get(register1);
-    auto result = value1 + val;
-
-    if (((value1 ^ val ^ (result & 0xFFFF)) & 0x100) == 0x100)
-    {
-        cpu->enable_flag(Flags::CarryFlag);
-    }
-
-    if (((value1 ^ val ^ (result & 0xFFFF)) & 0x10) == 0x10)
-    {
-        cpu->enable_flag(Flags::HalfCarryFlag);
-    }
-
-    cpu->set(register1, result);
-}
-
-void SWAP(RegisterType reg, GameboyCPU* cpu)
+void SWAP(long reg, GameboyCPU* cpu)
 {
     cpu->clear_flags();
 
-    long result = 0;
-    if (reg == RegisterType::None)
+    long value = 0;
+
+    switch (reg)
     {
-        auto HL = cpu->get(RegisterType::HL);
-        auto value = cpu->get_memory()->read8(HL);
-        
-        cpu->cycle(4);
+        case RegisterType::B:
+            value = cpu->registers.B;
+            break;
 
-        result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4);
+        case RegisterType::C:
+            value = cpu->registers.C;
+            break;
 
-        cpu->get_memory()->write8(HL, result);
+        case RegisterType::D:
+            value = cpu->registers.D;
+            break;
 
-        cpu->cycle(4);
-    } 
-    else
+        case RegisterType::E:
+            value = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            value = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            value = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            value = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            value = cpu->registers.A;
+            break;
+    }
+
+    long result = ((value & 0x0F) << 4) | ((value & 0xF0) >> 4);
+
+    switch (reg)
     {
-        auto data = cpu->get(reg);
+        case RegisterType::B:
+            cpu->registers.B = result;
+            break;
 
-        result = ((data & 0x0F) << 4) | ((data & 0xF0) >> 4);
-        cpu->set(reg, result);
+        case RegisterType::C:
+            cpu->registers.C = result;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = result;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = result;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = result;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = result;
+            break;
+
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, result);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = result;
+            break;
     }
 
     toggle_zero_flag(cpu, result);
-    cpu->cycle(4);
+    cpu->tick(4);
 }
 
-void SRL(RegisterType reg, GameboyCPU* cpu)
+void SRL(long reg, GameboyCPU* cpu)
 {
     cpu->clear_flags();
 
-    long result = 0;
+    long value = 0;
 
-    if (reg == RegisterType::None) {
-        result = cpu->get_memory()->read8(cpu->get(RegisterType::HL));
+    switch (reg)
+    {
+        case RegisterType::B:
+            value = cpu->registers.B;
+            break;
 
-        cpu->cycle(4);
-    } else {
-        result = cpu->get(reg);
+        case RegisterType::C:
+            value = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            value = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            value = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            value = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            value = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            value = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            value = cpu->registers.A;
+            break;
     }
 
-    if ((result & 0x01) != 0) {
+    if ((value & 0x01) != 0) {
         cpu->enable_flag(Flags::CarryFlag);
     }
 
-    result >>= 1;
+    value >>= 1;
 
-    if (reg == RegisterType::None) {
-        cpu->get_memory()->write8(cpu->get(RegisterType::HL), result);
+    switch (reg)
+    {
+        case RegisterType::B:
+            cpu->registers.B = value;
+            break;
 
-        cpu->cycle(4);
-    } else {
-        cpu->set(reg, result);
+        case RegisterType::C:
+            cpu->registers.C = value;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = value;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = value;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = value;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = value;
+            break;
+
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, value);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = value;
+            break;
     }
     
+    toggle_zero_flag(cpu, value);
+
+    cpu->tick(4);
+}
+
+void LD_0x01(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.BC = cpu->read_u16();
+}
+
+void LD_0x11(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.DE = cpu->read_u16();
+}
+
+void LD_0x21(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.HL = cpu->read_u16();
+}
+
+void LD_0x31(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.SP = cpu->read_u16();
+}
+
+void XOR_0xA8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A ^ cpu->registers.B;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
     toggle_zero_flag(cpu, result);
-
-    cpu->cycle(4);
 }
 
-void LD_0x01x11x21x31(Instruction* instruction)
+void XOR_0xA9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->read_u16();
-    auto reg = instruction->cpu->read_register_type(instruction->opcode >> 4, false);
+    long result = cpu->registers.A ^ cpu->registers.C;
 
-    instruction->cpu->set(reg, val);
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
 }
 
-void XOR_0xA9(Instruction* instruction)
+void XOR_0xAA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto result = instruction->cpu->get(RegisterType::A) ^ instruction->cpu->get(reg);
+    long result = cpu->registers.A ^ cpu->registers.D;
 
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
+    cpu->clear_flags();
+    cpu->registers.A = result;
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 }
 
-void LD_0x32(Instruction* instruction)
+void XOR_0xAB(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), instruction->cpu->get(RegisterType::A));
-    instruction->cpu->decrement(RegisterType::HL);
+    long result = cpu->registers.A ^ cpu->registers.E;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
 }
 
-void JR_0x20(Instruction* instruction)
+void XOR_0xAC(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto relative = instruction->cpu->read_s8();
+    long result = cpu->registers.A ^ cpu->registers.H;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void XOR_0xAD(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A ^ cpu->registers.L;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void XOR_0xAF(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A ^ cpu->registers.A;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void LD_0x32(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.A);
+    cpu->registers.HL--;
+}
+
+void JR_0x20(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long relative = cpu->read_s8();
     bool check = false;
 
-    switch ((instruction->opcode >> 3) & 0x03)
+    switch ((opcode >> 3) & 0x03)
     {
         case 0x00:
-            check = !instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = !cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x01:
-            check = instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x02:
-            check = !instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = !cpu->is_flag_set(Flags::CarryFlag);
             break;
 
         case 0x03:
-            check = instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = cpu->is_flag_set(Flags::CarryFlag);
             break;
     }
 
     if (check)
     {
-        instruction->cpu->increment(RegisterType::PC, relative);
+        cpu->registers.PC += relative;
         instruction->ticks += 4;
     }
 }
 
-void LD_0x06(Instruction* instruction)
+void LD_0x06(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode >> 3);
-    auto val = instruction->cpu->read_u8();
-
-    instruction->cpu->set(reg, val);
+    cpu->registers.B = cpu->read_u8();
 }
 
-void LD_0xE2(Instruction* instruction)
+void LD_0x0E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->get_memory()->write8(0xFF00 + instruction->cpu->get(RegisterType::C), instruction->cpu->get(RegisterType::A));
+    cpu->registers.C = cpu->read_u8();
 }
 
-void LD_0x70(Instruction* instruction)
+void LD_0x16(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-
-    instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), instruction->cpu->get(reg));
+    cpu->registers.D = cpu->read_u8();
 }
 
-void INC_0x04x0Cx14x1Cx24x2Cx3C(Instruction* instruction)
+void LD_0x1E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode >> 3);
+    cpu->registers.E = cpu->read_u8();
+}
 
-    instruction->cpu->disable_flag(Flags::ZeroFlag);
-    instruction->cpu->disable_flag(Flags::AddSubFlag);
+void LD_0x26(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->read_u8();
+}
 
-    instruction->cpu->increment(reg);
+void LD_0x2E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->read_u8();
+}
 
-    auto val = instruction->cpu->get(reg);
+void LD_0x3E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->read_u8();
+}
+
+void LD_0xE2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(0xFF00 + cpu->registers.C, cpu->registers.A);
+}
+
+void LD_0x70(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.B);
+}
+
+void LD_0x71(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.C);
+}
+
+void LD_0x72(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.D);
+}
+
+void LD_0x73(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.E);
+}
+
+void LD_0x74(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.H);
+}
+
+void LD_0x75(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.L);
+}
+
+void LD_0x77(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.A);
+}
+
+void INC_0x04(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
+
+    long val = ++cpu->registers.B;
 
     if ((val & 0x0F) == 0x00)
     {
-        instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+        cpu->enable_flag(Flags::HalfCarryFlag);
     }
     else
     {
-        instruction->cpu->disable_flag(Flags::HalfCarryFlag);
+        cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    toggle_zero_flag(instruction->cpu, val);
+    toggle_zero_flag(cpu, val);
 }
 
-void LDH_0xE0(Instruction* instruction)
+void INC_0x0C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
 
-    auto pos = 0xFF00 + instruction->cpu->read_u8();
+    long val = ++cpu->registers.C;
 
-    instruction->cpu->get_memory()->write8(pos, instruction->cpu->get(RegisterType::A));
-
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
-}
-
-void LD_0x1A(Instruction* instruction)
-{
-    instruction->cpu->set(RegisterType::A, instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::DE)));
-}
-
-void CALL_0xCD(Instruction* instruction)
-{
-    auto addr = instruction->cpu->read_u16();
-
-    instruction->cpu->push_stack(instruction->cpu->get(RegisterType::PC));
-    instruction->cpu->set(RegisterType::PC, addr);
-}
-
-void LD_0x40(Instruction* instruction)
-{
-    auto r1 = instruction->cpu->read_byte_register_type(instruction->opcode >> 3);
-    auto r2 = instruction->cpu->read_byte_register_type(instruction->opcode);
-
-    instruction->cpu->set(r1, instruction->cpu->get(r2));
-}
-
-void PUSH_0xC5(Instruction* instruction)
-{
-    auto reg = instruction->cpu->read_register_type(instruction->opcode >> 4, true);
-
-    instruction->cpu->push_stack(instruction->cpu->get(reg));
-}
-
-void POP_0xC1(Instruction* instruction)
-{
-    auto reg = instruction->cpu->read_register_type(instruction->opcode >> 4, true);
-
-    instruction->cpu->set(reg, instruction->cpu->pop_stack());
-
-    if (((instruction->opcode >> 4) & 0x03) == 0x03) {
-        instruction->cpu->set(reg, instruction->cpu->get(reg) & 0xFFF0);
+    if ((val & 0x0F) == 0x00)
+    {
+        cpu->enable_flag(Flags::HalfCarryFlag);
     }
+    else
+    {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, val);
 }
 
-void DEC_0x05x0Dx15x1Dx25x2Dx3D(Instruction* instruction)
+void INC_0x14(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode >> 3);
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
 
-    instruction->cpu->enable_flag(Flags::AddSubFlag);
-    instruction->cpu->disable_flag(Flags::ZeroFlag);
+    long val = ++cpu->registers.D;
 
-    instruction->cpu->decrement(reg);
+    if ((val & 0x0F) == 0x00)
+    {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+    else
+    {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
 
-    auto result = instruction->cpu->get(reg);
+    toggle_zero_flag(cpu, val);
+}
+
+void INC_0x1C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
+
+    long val = ++cpu->registers.E;
+
+    if ((val & 0x0F) == 0x00)
+    {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+    else
+    {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, val);
+}
+
+void INC_0x24(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
+
+    long val = ++cpu->registers.H;
+
+    if ((val & 0x0F) == 0x00)
+    {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+    else
+    {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, val);
+}
+
+void INC_0x2C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
+
+    long val = ++cpu->registers.L;
+
+    if ((val & 0x0F) == 0x00)
+    {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+    else
+    {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, val);
+}
+
+void INC_0x3C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
+
+    long val = ++cpu->registers.A;
+
+    if ((val & 0x0F) == 0x00)
+    {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+    else
+    {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, val);
+}
+
+void LDH_0xE0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+
+    long pos = 0xFF00 + cpu->read_u8();
+
+    cpu->memory.write8(pos, cpu->registers.A);
+
+    cpu->tick(4);
+    cpu->tick(4);
+}
+
+void LD_0x1A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->memory.read8(cpu->registers.DE);
+}
+
+void CALL_0xCD(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long addr = cpu->read_u16();
+
+    cpu->push_stack(cpu->registers.PC);
+    cpu->registers.PC = addr;
+}
+
+void LD_0x40(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->registers.B;
+}
+
+void LD_0x41(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->registers.C;
+}
+
+void LD_0x42(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->registers.D;
+}
+
+void LD_0x43(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->registers.E;
+}
+
+void LD_0x44(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->registers.H;
+}
+
+void LD_0x45(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->registers.L;
+}
+
+void LD_0x47(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->registers.A;
+}
+
+void LD_0x48(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->registers.B;
+}
+
+void LD_0x49(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->registers.C;
+}
+
+void LD_0x4A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->registers.D;
+}
+
+void LD_0x4B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->registers.E;
+}
+
+void LD_0x4C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->registers.H;
+}
+
+void LD_0x4D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->registers.L;
+}
+
+void LD_0x4F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->registers.A;
+}
+
+void LD_0x50(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->registers.B;
+}
+
+void LD_0x51(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->registers.C;
+}
+
+void LD_0x52(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->registers.D;
+}
+
+void LD_0x53(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->registers.E;
+}
+
+void LD_0x54(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->registers.H;
+}
+
+void LD_0x55(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->registers.L;
+}
+
+void LD_0x57(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->registers.A;
+}
+
+void LD_0x58(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->registers.B;
+}
+
+void LD_0x59(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->registers.C;
+}
+
+void LD_0x5A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->registers.D;
+}
+
+void LD_0x5B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->registers.E;
+}
+
+void LD_0x5C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->registers.H;
+}
+
+void LD_0x5D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->registers.L;
+}
+
+void LD_0x5F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->registers.A;
+}
+
+void LD_0x60(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->registers.B;
+}
+
+void LD_0x61(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->registers.C;
+}
+
+void LD_0x62(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->registers.D;
+}
+
+void LD_0x63(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->registers.E;
+}
+
+void LD_0x64(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->registers.H;
+}
+
+void LD_0x65(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->registers.L;
+}
+
+void LD_0x67(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->registers.A;
+}
+
+void LD_0x68(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->registers.B;
+}
+
+void LD_0x69(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->registers.C;
+}
+
+void LD_0x6A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->registers.D;
+}
+
+void LD_0x6B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->registers.E;
+}
+
+void LD_0x6C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->registers.H;
+}
+
+void LD_0x6D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->registers.L;
+}
+
+void LD_0x6F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->registers.A;
+}
+
+void LD_0x78(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->registers.B;
+}
+
+void LD_0x79(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->registers.C;
+}
+
+void LD_0x7A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->registers.D;
+}
+
+void LD_0x7B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->registers.E;
+}
+
+void LD_0x7C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->registers.H;
+}
+
+void LD_0x7D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->registers.L;
+}
+
+void LD_0x7F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->registers.A;
+}
+
+void PUSH_0xC5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->push_stack(cpu->registers.BC);
+}
+
+void PUSH_0xD5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->push_stack(cpu->registers.DE);
+}
+
+void PUSH_0xE5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->push_stack(cpu->registers.HL);
+}
+
+void PUSH_0xF5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->push_stack(cpu->registers.AF);
+}
+
+void POP_0xC1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.BC = cpu->pop_stack();
+}
+
+void POP_0xD1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.DE = cpu->pop_stack();
+}
+
+void POP_0xE1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.HL = cpu->pop_stack();
+}
+
+void POP_0xF1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.AF = cpu->pop_stack() & 0xFFF0;
+}
+
+void DEC_0x05(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
+
+    long result = --cpu->registers.B;
+
     if ((result & 0x0F) == 0x0F) {
-        instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+        cpu->enable_flag(Flags::HalfCarryFlag);
     } else {
-        instruction->cpu->disable_flag(Flags::HalfCarryFlag);
+        cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 }
 
-void LD_0x22(Instruction* instruction)
+void DEC_0x0D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), instruction->cpu->get(RegisterType::A));
-    instruction->cpu->increment(RegisterType::HL);
-}
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
 
-void INC_0x03x13x23x33(Instruction* instruction)
-{
-    auto reg = instruction->cpu->read_register_type(instruction->opcode >> 4, false);
-    instruction->cpu->increment(reg);
-}
+    long result = --cpu->registers.C;
 
-void RET_0xC9(Instruction* instruction)
-{
-    instruction->cpu->set(RegisterType::PC, instruction->cpu->pop_stack());
-}
-
-void CP_0xFE(Instruction* instruction)
-{
-    CP(instruction->cpu->read_u8(), instruction->cpu);
-}
-
-void LD_0xEA(Instruction* instruction)
-{
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
-
-    auto addr = instruction->cpu->read_u16();
-
-    instruction->cpu->get_memory()->write8(addr, instruction->cpu->get(RegisterType::A));
-
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
-}
-
-void LDH_0xF0(Instruction* instruction)
-{
-    instruction->cpu->cycle(4);
-
-    auto pos = 0xFF00 + instruction->cpu->read_u8();
-
-    instruction->cpu->set(RegisterType::A, instruction->cpu->get_memory()->read8(pos));
-
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
-}
-
-void SUB_0x90(Instruction* instruction)
-{
-    SUB(instruction->cpu->read_byte_register_type(instruction->opcode), false, instruction->cpu, false);
-}
-
-void JR_0x18(Instruction* instruction)
-{
-    auto relative = instruction->cpu->read_s8();
-
-    instruction->cpu->increment(RegisterType::PC, relative);
-}
-
-void CP_0xBE(Instruction* instruction)
-{
-    CP(instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL)), instruction->cpu);
-}
-
-void ADD_0x86(Instruction* instruction)
-{
-    ADD(RegisterType::None, false, instruction->cpu, false);
-}
-
-void RL_0x11(Instruction* instruction)
-{
-    instruction->cpu->cycle(4);
-
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto result = 0;
-
-    if ((instruction->opcode & 0x7) == 6) {
-        result = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-
-        instruction->cpu->cycle(4);
+    if ((result & 0x0F) == 0x0F) {
+        cpu->enable_flag(Flags::HalfCarryFlag);
     } else {
-        result = instruction->cpu->get(reg);
+        cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    auto carry = instruction->cpu->is_flag_set(Flags::CarryFlag) ? 0x01 : 0x00;
+    toggle_zero_flag(cpu, result);
+}
 
-    instruction->cpu->clear_flags();
+void DEC_0x15(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
+
+    long result = --cpu->registers.D;
+
+    if ((result & 0x0F) == 0x0F) {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    } else {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, result);
+}
+
+void DEC_0x1D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
+
+    long result = --cpu->registers.E;
+
+    if ((result & 0x0F) == 0x0F) {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    } else {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, result);
+}
+
+void DEC_0x25(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
+
+    long result = --cpu->registers.H;
+
+    if ((result & 0x0F) == 0x0F) {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    } else {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, result);
+}
+
+void DEC_0x2D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
+
+    long result = --cpu->registers.L;
+
+    if ((result & 0x0F) == 0x0F) {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    } else {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, result);
+}
+
+void DEC_0x3D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
+
+    long result = --cpu->registers.A;
+
+    if ((result & 0x0F) == 0x0F) {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    } else {
+        cpu->disable_flag(Flags::HalfCarryFlag);
+    }
+
+    toggle_zero_flag(cpu, result);
+}
+
+void LD_0x22(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->memory.write8(cpu->registers.HL, cpu->registers.A);
+    cpu->registers.HL++;
+}
+
+void INC_0x03(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.BC++;
+}
+
+void INC_0x13(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.DE++;
+}
+
+void INC_0x23(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.HL++;
+}
+
+void INC_0x33(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.SP++;
+}
+
+void RET_0xC9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.PC = cpu->pop_stack();
+}
+
+void CP_0xFE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    CP(cpu->read_u8(), cpu);
+}
+
+void LD_0xEA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+    cpu->tick(4);
+
+    long addr = cpu->read_u16();
+
+    cpu->memory.write8(addr, cpu->registers.A);
+
+    cpu->tick(4);
+    cpu->tick(4);
+}
+
+void LDH_0xF0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+
+    long pos = 0xFF00 + cpu->read_u8();
+
+    cpu->registers.A = cpu->memory.read8(pos);
+
+    cpu->tick(4);
+    cpu->tick(4);
+}
+
+void SUB_0x90(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    SUB(cpu->read_byte_register_type(opcode), false, cpu, false);
+}
+
+void JR_0x18(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long relative = cpu->read_s8();
+
+    cpu->registers.PC += relative;
+}
+
+void CP_0xBE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    CP(cpu->memory.read8(cpu->registers.HL), cpu);
+}
+
+void ADD_0x86(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    ADD(RegisterType::HL, false, cpu, false);
+}
+
+void RL_0x11(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+
+    long reg = cpu->read_byte_register_type(opcode, true);
+    long result = 0;
+
+    switch (reg)
+    {
+        case RegisterType::B:
+            result = cpu->registers.B;
+            break;
+
+        case RegisterType::C:
+            result = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            result = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            result = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            result = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            result = cpu->registers.L;
+            break;
+
+        case RegisterType::A:
+            result = cpu->registers.A;
+            break;
+        
+        case RegisterType::HL:
+            result = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+    }
+
+    long carry = cpu->is_flag_set(Flags::CarryFlag) ? 0x01 : 0x00;
+
+    cpu->clear_flags();
 
     if ((result & 0x80) != 0) {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     }
 
     result <<= 1;
     result |= carry;
 
-    if ((instruction->opcode & 0x7) == 6) {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
+    switch (reg)
+    {
+        case RegisterType::B:
+            cpu->registers.B = result;
+            break;
 
-        instruction->cpu->cycle(4);
-    } else {
-        instruction->cpu->set(reg, result);
+        case RegisterType::C:
+            cpu->registers.C = result;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = result;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = result;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = result;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = result;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = result;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, result);
+            cpu->tick(4);
+            break;
     }
 
-    toggle_zero_flag(instruction->cpu, result);
-    instruction->cpu->cycle(4);
+    toggle_zero_flag(cpu, result);
+    cpu->tick(4);
 }
 
-void RLA_0x17(Instruction* instruction)
+void RLA_0x17(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto carry = instruction->cpu->is_flag_set(Flags::CarryFlag) ? 1 : 0;
-    auto result = instruction->cpu->get(reg);
+    long carry = cpu->is_flag_set(Flags::CarryFlag) ? 1 : 0;
+    long result = cpu->registers.A;
 
-    instruction->cpu->clear_flags();
+    cpu->clear_flags();
 
     if ((result & 0x80) != 0) {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     }
 
     result <<= 1;
     result |= carry;
 
-    instruction->cpu->set(reg, result);
+    cpu->registers.A = result;
 }
 
-void BIT_0x7C(Instruction* instruction)
+void BIT_0x7C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto bit = (instruction->opcode & 0b00111000) >> 3;
+    long reg = cpu->read_byte_register_type(opcode, true);
+    long bit = (opcode & 0b00111000) >> 3;
 
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        BIT_Impl(RegisterType::None, bit, instruction->cpu);
-    }
-    else
-    {
-        BIT_Impl(reg, bit, instruction->cpu);
-    }
+    BIT_Impl(reg, bit, cpu);
 }
 
-void JP_0xC3(Instruction* instruction)
+void JP_0xC3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto addr = instruction->cpu->read_u16();
-
-    instruction->cpu->set(RegisterType::PC, addr);
+    long addr = cpu->read_u16();
+    cpu->registers.PC = addr;
 }
 
-void DI_0xF3(Instruction* instruction)
+void DI_0xF3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set_enable_interrupts(false);
+    cpu->set_enable_interrupts(false);
 }
 
-void LD_0x36(Instruction* instruction)
+void LD_0x36(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    auto val = instruction->cpu->read_u8();
+    long val = cpu->read_u8();
 
-    instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), val);
+    cpu->memory.write8(cpu->registers.HL, val);
 
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
+    cpu->tick(4);
 }
 
-void LD_0x2A(Instruction* instruction)
+void LD_0x2A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set(RegisterType::A, instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL)));
-    instruction->cpu->increment(RegisterType::HL);
+    cpu->registers.A = cpu->memory.read8(cpu->registers.HL);
+    cpu->registers.HL++;
 }
 
-void DEC_0x0B(Instruction* instruction)
+void DEC_0x0B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_register_type(instruction->opcode >> 4, false);
-
-    instruction->cpu->decrement(reg);
+    cpu->registers.BC--;
 }
 
-void OR_0xB0(Instruction* instruction)
+void DEC_0x1B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto result = instruction->cpu->get(RegisterType::A) | instruction->cpu->get(reg);
-
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
-
-    toggle_zero_flag(instruction->cpu, result);
+    cpu->registers.DE--;
 }
 
-void EI_0xFB(Instruction* instruction)
+void DEC_0x2B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set_enable_interrupts(true);
+    cpu->registers.HL--;
 }
 
-void AND_0xA0(Instruction* instruction)
+void DEC_0x3B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto result = instruction->cpu->get(RegisterType::A) & instruction->cpu->get(reg);
-
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
-
-    toggle_zero_flag(instruction->cpu, result);
-
-    instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+    cpu->registers.SP--;
 }
 
-void RET_0xC0(Instruction* instruction)
+void OR_0xB0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A | cpu->registers.B;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void OR_0xB1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A | cpu->registers.C;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void OR_0xB2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A | cpu->registers.D;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void OR_0xB3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A | cpu->registers.E;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void OR_0xB4(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A | cpu->registers.H;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void OR_0xB5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A | cpu->registers.L;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void OR_0xB7(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long result = cpu->registers.A | cpu->registers.A;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+}
+
+void EI_0xFB(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->set_enable_interrupts(true);
+}
+
+void AND_0xA0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long reg = cpu->read_byte_register_type(opcode);
+    long result = cpu->registers.A & cpu->registers.B;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+
+    cpu->enable_flag(Flags::HalfCarryFlag);
+}
+
+void AND_0xA1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long reg = cpu->read_byte_register_type(opcode);
+    long result = cpu->registers.A & cpu->registers.C;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+
+    cpu->enable_flag(Flags::HalfCarryFlag);
+}
+
+void AND_0xA2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long reg = cpu->read_byte_register_type(opcode);
+    long result = cpu->registers.A & cpu->registers.D;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+
+    cpu->enable_flag(Flags::HalfCarryFlag);
+}
+
+void AND_0xA3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long reg = cpu->read_byte_register_type(opcode);
+    long result = cpu->registers.A & cpu->registers.E;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+
+    cpu->enable_flag(Flags::HalfCarryFlag);
+}
+
+void AND_0xA4(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long reg = cpu->read_byte_register_type(opcode);
+    long result = cpu->registers.A & cpu->registers.H;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+
+    cpu->enable_flag(Flags::HalfCarryFlag);
+}
+
+void AND_0xA5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long reg = cpu->read_byte_register_type(opcode);
+    long result = cpu->registers.A & cpu->registers.L;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+
+    cpu->enable_flag(Flags::HalfCarryFlag);
+}
+
+void AND_0xA7(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long reg = cpu->read_byte_register_type(opcode);
+    long result = cpu->registers.A & cpu->registers.A;
+
+    cpu->clear_flags();
+    cpu->registers.A = result;
+
+    toggle_zero_flag(cpu, result);
+
+    cpu->enable_flag(Flags::HalfCarryFlag);
+}
+
+void RET_0xC0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
     bool check = false;
 
-    switch ((instruction->opcode >> 3) & 0x03)
+    switch ((opcode >> 3) & 0x03)
     {
         case 0x00:
-            check = !instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = !cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x01:
-            check = instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x02:
-            check = !instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = !cpu->is_flag_set(Flags::CarryFlag);
             break;
 
         case 0x03:
-            check = instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = cpu->is_flag_set(Flags::CarryFlag);
             break;
     }
 
     if (check)
     {
-        instruction->cpu->set(RegisterType::PC, instruction->cpu->pop_stack());
+        cpu->registers.PC = cpu->pop_stack();
         instruction->ticks += 12;
     }
 }
 
-void LD_0xFA(Instruction* instruction)
+void LD_0xFA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
+    cpu->tick(4);
 
-    auto addr = instruction->cpu->read_u16();
-    instruction->cpu->set(RegisterType::A, instruction->cpu->get_memory()->read8(addr));
+    long addr = cpu->read_u16();
+    cpu->registers.A = cpu->memory.read8(addr);
 
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
+    cpu->tick(4);
 }
 
-void INC_0x34(Instruction* instruction)
+void INC_0x34(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->disable_flag(Flags::ZeroFlag);
-    instruction->cpu->disable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
 
-    auto HL = instruction->cpu->get(RegisterType::HL);
-    auto val = (instruction->cpu->get_memory()->read8(HL) + 1) & 0xFF;
+    long HL = cpu->registers.HL;
+    long val = (cpu->memory.read8(HL) + 1) & 0xFF;
 
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    toggle_zero_flag(instruction->cpu, val);
+    toggle_zero_flag(cpu, val);
 
     if ((val & 0xF) == 0x00) {
-        instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+        cpu->enable_flag(Flags::HalfCarryFlag);
     } else {
-        instruction->cpu->disable_flag(Flags::HalfCarryFlag);
+        cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    instruction->cpu->get_memory()->write8(HL, val);
+    cpu->memory.write8(HL, val);
 
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
+    cpu->tick(4);
 }
 
-void RETI_0xD9(Instruction* instruction)
+void RETI_0xD9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set(RegisterType::PC, instruction->cpu->pop_stack());
-    instruction->cpu->set_enable_interrupts(true);
+    cpu->registers.PC = cpu->pop_stack();
+    cpu->set_enable_interrupts(true);
 }
 
-void CPL_0x2F(Instruction* instruction)
+void CPL_0x2F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set(RegisterType::A, instruction->cpu->get(RegisterType::A) ^ 0xFF);
+    cpu->registers.A = ((long)cpu->registers.A) ^ 0xFF;
 
-    instruction->cpu->enable_flag(Flags::HalfCarryFlag);
-    instruction->cpu->enable_flag(Flags::AddSubFlag);
+    cpu->enable_flag(Flags::HalfCarryFlag);
+    cpu->enable_flag(Flags::AddSubFlag);
 }
 
-void AND_0xE6(Instruction* instruction)
+void AND_0xE6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->read_u8();
-    auto result = instruction->cpu->get(RegisterType::A) & val;
+    long val = cpu->read_u8();
+    long result = cpu->registers.A & val;
 
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
+    cpu->clear_flags();
+    cpu->registers.A = result;
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 
-    instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+    cpu->enable_flag(Flags::HalfCarryFlag);
 }
 
-void SWAP_0x37(Instruction* instruction)
+void SWAP_0x37(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
+    long reg = cpu->read_byte_register_type(opcode, true);
 
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        SWAP(RegisterType::None, instruction->cpu);
-    } 
-    else
-    {
-        SWAP(reg, instruction->cpu);
-    }
+    SWAP(reg, cpu);
 }
 
-void RST_0xEF(Instruction* instruction)
+void RST_0xEF(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto t = ((instruction->opcode >> 3) & 0x07);
-    auto n = t * 0x08;
+    long t = ((opcode >> 3) & 0x07);
+    long n = t * 0x08;
 
-    instruction->cpu->push_stack(instruction->cpu->get(RegisterType::PC));
-    instruction->cpu->set(RegisterType::PC, n);
+    cpu->push_stack(cpu->registers.PC);
+    cpu->registers.PC = n;
 }
 
-void ADD_0x81(Instruction* instruction)
+void ADD_0x81(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    ADD(instruction->cpu->read_byte_register_type(instruction->opcode), false, instruction->cpu, false);
+    ADD(cpu->read_byte_register_type(opcode), false, cpu, false);
 }
 
-void ADD_0x09(Instruction* instruction)
+inline void ADD_IMPL(uint8_t opcode, GameboyCPU* cpu, long data)
 {
-    auto reg = instruction->cpu->read_register_type(instruction->opcode >> 4, false);
+    long reg = cpu->read_register_type(opcode >> 4, false);
 
-    instruction->cpu->disable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
 
-    auto HL = instruction->cpu->get(RegisterType::HL);
-    auto data = instruction->cpu->get(reg);
-
-    auto result = (HL + data) & 0xFFFF;
+    long HL = cpu->registers.HL;
+    long result = (HL + data) & 0xFFFF;
 
     if (result < HL) {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     } else {
-        instruction->cpu->disable_flag(Flags::CarryFlag);
+        cpu->disable_flag(Flags::CarryFlag);
     }
 
     if ((result ^ HL ^ data) & 0x1000) {
-        instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+        cpu->enable_flag(Flags::HalfCarryFlag);
     } else {
-        instruction->cpu->disable_flag(Flags::HalfCarryFlag);
+        cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    instruction->cpu->set(RegisterType::HL, result);
+    cpu->registers.HL = result;
 }
 
-void LD_0x46(Instruction* instruction)
+void ADD_0x09(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode >> 3);
-    auto val = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-
-    instruction->cpu->set(reg, val);
+    ADD_IMPL(opcode, cpu, cpu->registers.BC);
 }
 
-void JP_0xE9(Instruction* instruction)
+void ADD_0x19(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set(RegisterType::PC, instruction->cpu->get(RegisterType::HL));
+    ADD_IMPL(opcode, cpu, cpu->registers.DE);
 }
 
-void RES_0x87(Instruction* instruction)
+void ADD_0x29(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    ADD_IMPL(opcode, cpu, cpu->registers.HL);
+}
 
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto bit = (instruction->opcode & 0b00111000) >> 3;
+void ADD_0x39(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    ADD_IMPL(opcode, cpu, cpu->registers.SP);
+}
+
+void LD_0x46(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.B = cpu->memory.read8(cpu->registers.HL);
+}
+
+void LD_0x4E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.C = cpu->memory.read8(cpu->registers.HL);
+}
+
+void LD_0x56(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.D = cpu->memory.read8(cpu->registers.HL);
+}
+
+void LD_0x5E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.E = cpu->memory.read8(cpu->registers.HL);
+}
+
+void LD_0x66(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.H = cpu->memory.read8(cpu->registers.HL);
+}
+
+void LD_0x6E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.L = cpu->memory.read8(cpu->registers.HL);
+}
+
+void LD_0x7E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.A = cpu->memory.read8(cpu->registers.HL);
+}
+
+void JP_0xE9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->registers.PC = cpu->registers.HL;
+}
+
+void RES_0x87(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+
+    long reg = cpu->read_byte_register_type(opcode, true);
+    long bit = (opcode & 0b00111000) >> 3;
 
     long result = 0;
-    if ((instruction->opcode & 0x7) == 6) {
-        result = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
 
-        instruction->cpu->cycle(4);
-    }
-    else
+    
+    switch (reg)
     {
-        result = instruction->cpu->get(reg);
+        case RegisterType::B:
+            result = cpu->registers.B;
+            break;
+
+        case RegisterType::C:
+            result = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            result = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            result = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            result = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            result = cpu->registers.L;
+            break;
+
+        case RegisterType::A:
+            result = cpu->registers.A;
+            break;
+        
+        case RegisterType::HL:
+            result = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
     }
 
     result &= ~(1 << bit);
 
-    if ((instruction->opcode & 0x7) == 6) {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
-
-        instruction->cpu->cycle(4);
-    }
-    else
+    switch (reg)
     {
-        instruction->cpu->set(reg, result);
+        case RegisterType::B:
+            cpu->registers.B = result;
+            break;
+
+        case RegisterType::C:
+            cpu->registers.C = result;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = result;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = result;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = result;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = result;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = result;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, result);
+            cpu->tick(4);
+            break;
     }
 
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 }
 
-void LD_0x12(Instruction* instruction)
+void LD_0x12(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::DE), instruction->cpu->get(RegisterType::A));
+    cpu->memory.write8(cpu->registers.DE, cpu->registers.A);
 }
 
-void JP_0xC2(Instruction* instruction)
+void JP_0xC2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto addr = instruction->cpu->read_u16();
+    long addr = cpu->read_u16();
     bool check = false;
 
-    switch ((instruction->opcode >> 3) & 0x03)
+    switch ((opcode >> 3) & 0x03)
     {
         case 0x00:
-            check = !instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = !cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x01:
-            check = instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x02:
-            check = !instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = !cpu->is_flag_set(Flags::CarryFlag);
             break;
 
         case 0x03:
-            check = instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = cpu->is_flag_set(Flags::CarryFlag);
             break;
     }
 
     if (check)
     {
-        instruction->cpu->set(RegisterType::PC, addr);
+        cpu->registers.PC = addr;
         instruction->ticks += 4;
     }
 }
 
-void LD_0x02(Instruction* instruction)
+void LD_0x02(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::BC), instruction->cpu->get(RegisterType::A));
+    cpu->memory.write8(cpu->registers.BC, cpu->registers.A);
 }
 
-void RLCA_0x07(Instruction* instruction)
+void RLCA_0x07(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->get(RegisterType::A);
-    instruction->cpu->clear_flags();
+    long val = cpu->registers.A;
+    cpu->clear_flags();
 
     if ((val & 0x80) != 0) {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
 
         val <<= 1;
         val |= 0x01;
@@ -865,32 +1901,32 @@ void RLCA_0x07(Instruction* instruction)
         val <<= 1;
     }
 
-    instruction->cpu->set(RegisterType::A, val);
+    cpu->registers.A = val;
 }
 
-void LD_0x08(Instruction* instruction)
+void LD_0x08(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto addr = instruction->cpu->read_u16();
+    long addr = cpu->read_u16();
 
-    auto SP = instruction->cpu->get(RegisterType::SP);
-    instruction->cpu->get_memory()->write8(addr + 0, SP & 0xFF);
-    instruction->cpu->get_memory()->write8(addr + 1, (SP >> 8) & 0xFF);
+    long SP = cpu->registers.SP;
+    cpu->memory.write8(addr + 0, SP & 0xFF);
+    cpu->memory.write8(addr + 1, (SP >> 8) & 0xFF);
 }
 
-void LD_0x0A(Instruction* instruction)
+void LD_0x0A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::BC));
+    long val = cpu->memory.read8(cpu->registers.BC);
 
-    instruction->cpu->set(RegisterType::A, val);
+    cpu->registers.A = val;
 }
 
-void RRCA_0x0F(Instruction* instruction)
+void RRCA_0x0F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->get(RegisterType::A);
-    instruction->cpu->clear_flags();
+    long val = cpu->registers.A;
+    cpu->clear_flags();
 
     if ((val & 0x01) != 0) {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
 
         val >>= 1;
         val |= 0x80;
@@ -898,58 +1934,57 @@ void RRCA_0x0F(Instruction* instruction)
         val >>= 1;
     }
 
-    instruction->cpu->set(RegisterType::A, val);
+    cpu->registers.A = val;
 }
 
-void RRA_0x1F(Instruction* instruction)
+void RRA_0x1F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto carry = instruction->cpu->is_flag_set(Flags::CarryFlag) ? 0x80 : 0;
-    auto result = instruction->cpu->get(reg);
+    long carry = cpu->is_flag_set(Flags::CarryFlag) ? 0x80 : 0;
+    long result = cpu->registers.A;
 
-    instruction->cpu->clear_flags();
+    cpu->clear_flags();
 
     if ((result & 0x01) != 0)
     {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     }
 
     result >>= 1;
     result |= carry;
 
-    instruction->cpu->set(reg, result);
+    cpu->registers.A = result;
 }
 
-void DAA_0x27(Instruction* instruction)
+void DAA_0x27(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto a = instruction->cpu->get(RegisterType::A);
+    long a = cpu->registers.A;
 
-    if (!instruction->cpu->is_flag_set(Flags::AddSubFlag))
+    if (!cpu->is_flag_set(Flags::AddSubFlag))
     {
-        if (instruction->cpu->is_flag_set(Flags::HalfCarryFlag) || (a & 0xF) > 9)
+        if (cpu->is_flag_set(Flags::HalfCarryFlag) || (a & 0xF) > 9)
         {
             a += 0x06;
         }
 
-        if (instruction->cpu->is_flag_set(Flags::CarryFlag) || a > 0x9F)
+        if (cpu->is_flag_set(Flags::CarryFlag) || a > 0x9F)
         {
             a += 0x60;
         }
     }
     else
     {
-        if (instruction->cpu->is_flag_set(Flags::HalfCarryFlag))
+        if (cpu->is_flag_set(Flags::HalfCarryFlag))
         {
             a = (a - 6) & 0xFF;
         }
 
-        if (instruction->cpu->is_flag_set(Flags::CarryFlag))
+        if (cpu->is_flag_set(Flags::CarryFlag))
         {
             a -= 0x60;
         }
     }
 
-    auto F = instruction->cpu->get(RegisterType::F);
+    long F = cpu->registers.F;
     F &= ~(Flags::HalfCarryFlag | Flags::ZeroFlag);
 
     if ((a & 0x100) == 0x100)
@@ -964,95 +1999,95 @@ void DAA_0x27(Instruction* instruction)
         F |= Flags::ZeroFlag;
     }
 
-    instruction->cpu->set(RegisterType::F, F);
-    instruction->cpu->set(RegisterType::A, a);
+    cpu->registers.F = F;
+    cpu->registers.A = a;
 
-    toggle_zero_flag(instruction->cpu, a & 0xFF);
+    toggle_zero_flag(cpu, a);
 }
 
-void DEC_0x35(Instruction* instruction)
+void DEC_0x35(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->enable_flag(Flags::AddSubFlag);
-    instruction->cpu->disable_flag(Flags::ZeroFlag);
+    cpu->enable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::ZeroFlag);
 
-    auto HL = instruction->cpu->get(RegisterType::HL);
-    auto val = (instruction->cpu->get_memory()->read8(HL) - 1) & 0xFF;
+    long HL = cpu->registers.HL;
+    long val = (cpu->memory.read8(HL) - 1) & 0xFF;
 
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
     if ((val & 0xF) == 0xF)
     {
-        instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+        cpu->enable_flag(Flags::HalfCarryFlag);
     }
     else
     {
-        instruction->cpu->disable_flag(Flags::HalfCarryFlag);
+        cpu->disable_flag(Flags::HalfCarryFlag);
     }
 
-    toggle_zero_flag(instruction->cpu, val);
+    toggle_zero_flag(cpu, val);
 
-    instruction->cpu->get_memory()->write8(HL, val);
+    cpu->memory.write8(HL, val);
 
-    instruction->cpu->cycle(4);
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
+    cpu->tick(4);
 }
 
-void SCF_0x37(Instruction* instruction)
+void SCF_0x37(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->disable_flag(Flags::AddSubFlag);
-    instruction->cpu->disable_flag(Flags::HalfCarryFlag);
-    instruction->cpu->enable_flag(Flags::CarryFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::HalfCarryFlag);
+    cpu->enable_flag(Flags::CarryFlag);
 }
 
-void LD_0x3A(Instruction* instruction)
+void LD_0x3A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set(RegisterType::A, instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL)));
-    instruction->cpu->decrement(RegisterType::HL);
+    cpu->registers.A = cpu->memory.read8(cpu->registers.HL);
+    cpu->registers.HL--;
 }
 
-void CCF_0x3F(Instruction* instruction)
+void CCF_0x3F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->disable_flag(Flags::AddSubFlag);
-    instruction->cpu->disable_flag(Flags::HalfCarryFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::HalfCarryFlag);
 
-    if (instruction->cpu->is_flag_set(Flags::CarryFlag))
+    if (cpu->is_flag_set(Flags::CarryFlag))
     {
-        instruction->cpu->disable_flag(Flags::CarryFlag);
+        cpu->disable_flag(Flags::CarryFlag);
     }
     else
     {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     }
 }
 
-void HALT_0x76(Instruction* instruction)
+void HALT_0x76(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set_wait_for_interrupt(true);
+    cpu->set_wait_for_interrupt(true);
 }
 
-void ADC_0x8F(Instruction* instruction)
+void ADC_0x8F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto target = instruction->opcode & 0xF;
-    auto number = 0;
+    long target = opcode & 0xF;
+    long number = 0;
 
     if (target == 14)
     {
-        auto memoryFlag = (instruction->opcode & 0b01000000) == 0;
+        long memoryFlag = (opcode & 0b01000000) == 0;
 
         if (memoryFlag)
         {
-            ADD(RegisterType::None, true, instruction->cpu, false);
+            ADD(RegisterType::HL, true, cpu, false);
         }
         else
         {
-            number = instruction->cpu->read_u8();
-            ADD(number, true, instruction->cpu, true);
+            number = cpu->read_u8();
+            ADD(number, true, cpu, true);
         }
 
         return;
     }
 
-    RegisterType reg = RegisterType::None;
+    long reg = RegisterType::HL;
 
     switch (target)
     {
@@ -1085,37 +2120,37 @@ void ADC_0x8F(Instruction* instruction)
            break;
     }
 
-    ADD(reg, true, instruction->cpu, false);
+    ADD(reg, true, cpu, false);
 }
 
-void SUB_0x96(Instruction* instruction)
+void SUB_0x96(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    SUB(RegisterType::None, false, instruction->cpu, false);
+    SUB(RegisterType::HL, false, cpu, false);
 }
 
-void SBC_0xDE(Instruction* instruction)
+void SBC_0xDE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto target = instruction->opcode & 0xF;
+    long target = opcode & 0xF;
     long number = 0;
 
     if (target == 14)
     {
-        auto memoryFlag = (instruction->opcode & 0b01000000) == 0;
+        long memoryFlag = (opcode & 0b01000000) == 0;
 
         if (memoryFlag)
         {
-            SUB(RegisterType::None, true, instruction->cpu, false);
+            SUB(RegisterType::HL, true, cpu, false);
         }
         else
         {
-            number = instruction->cpu->read_u8();
-            SUB(number, true, instruction->cpu, true);
+            number = cpu->read_u8();
+            SUB(number, true, cpu, true);
         }
 
         return;
     }
     
-    RegisterType reg = RegisterType::None;
+    long reg = RegisterType::HL;
 
     switch (target)
     {
@@ -1148,373 +2183,640 @@ void SBC_0xDE(Instruction* instruction)
            break;
     }
 
-    SUB(reg, true, instruction->cpu, false);
+    SUB(reg, true, cpu, false);
 }
 
-void AND_0xA6(Instruction* instruction)
+void AND_0xA6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-    auto result = instruction->cpu->get(RegisterType::A) & val;
+    long val = cpu->memory.read8(cpu->registers.HL);
+    long result = cpu->registers.A & val;
 
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
+    cpu->clear_flags();
+    cpu->registers.A = result;
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 
-    instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+    cpu->enable_flag(Flags::HalfCarryFlag);
 }
 
-void XOR_0xAE(Instruction* instruction)
+void XOR_0xAE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-    auto result = instruction->cpu->get(RegisterType::A) ^ val;
+    long val = cpu->memory.read8(cpu->registers.HL);
+    long result = cpu->registers.A ^ val;
 
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
+    cpu->clear_flags();
+    cpu->registers.A = result;
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 }
 
-void OR_0xB6(Instruction* instruction)
+void OR_0xB6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-    auto result = instruction->cpu->get(RegisterType::A) | val;
+    long val = cpu->memory.read8(cpu->registers.HL);
+    long result = cpu->registers.A | val;
 
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
+    cpu->clear_flags();
+    cpu->registers.A = result;
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 }
 
-void CP_0xBB(Instruction* instruction)
+void CP_0xB8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-
-    CP(instruction->cpu->get(reg), instruction->cpu);
+    CP(cpu->registers.B, cpu);
 }
 
-void CALL_0xC4(Instruction* instruction)
+void CP_0xB9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto addr = instruction->cpu->read_u16();
+    CP(cpu->registers.C, cpu);
+}
+
+void CP_0xBA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    CP(cpu->registers.D, cpu);
+}
+
+void CP_0xBB(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    CP(cpu->registers.E, cpu);
+}
+
+void CP_0xBC(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    CP(cpu->registers.H, cpu);
+}
+
+void CP_0xBD(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    CP(cpu->registers.L, cpu);
+}
+
+void CP_0xBF(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    CP(cpu->registers.A, cpu);
+}
+
+void CALL_0xC4(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    long addr = cpu->read_u16();
     bool check = false;
 
-    switch ((instruction->opcode >> 3) & 0x03)
+    switch ((opcode >> 3) & 0x03)
     {
         case 0x00:
-            check = !instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = !cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x01:
-            check = instruction->cpu->is_flag_set(Flags::ZeroFlag);
+            check = cpu->is_flag_set(Flags::ZeroFlag);
             break;
 
         case 0x02:
-            check = !instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = !cpu->is_flag_set(Flags::CarryFlag);
             break;
 
         case 0x03:
-            check = instruction->cpu->is_flag_set(Flags::CarryFlag);
+            check = cpu->is_flag_set(Flags::CarryFlag);
             break;
     }
 
     if (check)
     {
-        instruction->cpu->push_stack(instruction->cpu->get(RegisterType::PC));
-        instruction->cpu->set(RegisterType::PC, addr);
+        cpu->push_stack(cpu->registers.PC);
+        cpu->registers.PC = addr;
         instruction->ticks += 12;
     }
 }
 
-void ADD_0xC6(Instruction* instruction)
+void ADD_0xC6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    ADD(instruction->cpu->read_u8(), false, instruction->cpu, true);
+    ADD(cpu->read_u8(), false, cpu, true);
 }
 
-void SUB_0xD6(Instruction* instruction)
+void SUB_0xD6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    SUB(instruction->cpu->read_u8(), false, instruction->cpu, true);
+    SUB(cpu->read_u8(), false, cpu, true);
 }
 
-void ADD_0xE8(Instruction* instruction)
+void ADD_0xE8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    ADD_16(RegisterType::SP, instruction->cpu->read_s8(), instruction->cpu, true);
+    cpu->clear_flags();
+    
+    long value = cpu->read_s8();
+    long sp = cpu->registers.SP;
+
+    long result = sp + value;
+
+    if (((sp ^ value ^ (result & 0xFFFF)) & 0x100) == 0x100)
+    {
+        cpu->enable_flag(Flags::CarryFlag);
+    }
+
+    if (((sp ^ value ^ (result & 0xFFFF)) & 0x10) == 0x10)
+    {
+        cpu->enable_flag(Flags::HalfCarryFlag);
+    }
+
+    cpu->registers.SP = result;
 }
 
-void XOR_0xEE(Instruction* instruction)
+void XOR_0xEE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->read_u8();
-    auto result = instruction->cpu->get(RegisterType::A) ^ val;
+    long val = cpu->read_u8();
+    long result = cpu->registers.A ^ val;
 
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
+    cpu->clear_flags();
+    cpu->registers.A = result;
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 }
 
-void LD_0xF2(Instruction* instruction)
+void LD_0xF2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set(RegisterType::A, instruction->cpu->get_memory()->read8(0xFF00 + instruction->cpu->get(RegisterType::C)));
+    cpu->registers.A = cpu->memory.read8(0xFF00 + cpu->registers.C);
 }
 
-void OR_0xF6(Instruction* instruction)
+void OR_0xF6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    auto val = instruction->cpu->read_u8();
-    auto result = instruction->cpu->get(RegisterType::A) | val;
+    long val = cpu->read_u8();
+    long result = cpu->registers.A | val;
 
-    instruction->cpu->clear_flags();
-    instruction->cpu->set(RegisterType::A, result);
+    cpu->clear_flags();
+    cpu->registers.A = result;
 
-    toggle_zero_flag(instruction->cpu, result);
+    toggle_zero_flag(cpu, result);
 }
 
-void LD_0xF8(Instruction* instruction)
+void LD_0xF8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->clear_flags();
+    cpu->clear_flags();
 
-    auto SP = instruction->cpu->get(RegisterType::SP);
-    auto val = instruction->cpu->read_s8();
-    auto result = (SP + val) & 0xFFFF;
+    long SP = cpu->registers.SP;
+    int8_t val = cpu->read_s8();
+    long result = (SP + val) & 0xFFFF;
 
     if (((SP ^ val ^ result) & 0x100) == 0x100)
     {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     }
 
     if (((SP ^ val ^ result) & 0x10) == 0x10)
     {
-        instruction->cpu->enable_flag(Flags::HalfCarryFlag);
+        cpu->enable_flag(Flags::HalfCarryFlag);
     }
     
-    instruction->cpu->set(RegisterType::HL, result);
+    cpu->registers.HL = result;
 }
 
-void LD_0xF9(Instruction* instruction)
+void LD_0xF9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->set(RegisterType::SP, instruction->cpu->get(RegisterType::HL));
+    cpu->registers.SP = cpu->registers.HL;
 }
 
-void SRL_0x38(Instruction* instruction)
+void SRL_0x38(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
+    long reg = cpu->read_byte_register_type(opcode, true);
 
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        SRL(RegisterType::None, instruction->cpu);
-    }
-    else
-    {
-        SRL(reg, instruction->cpu);
-    }
+    SRL(reg, cpu);
 }
 
-void RLC_0x00(Instruction* instruction)
+void RLC_0x00(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
+    long reg = cpu->read_byte_register_type(opcode, true);
     long value = 0;
 
-    instruction->cpu->disable_flag(Flags::HalfCarryFlag);
-    instruction->cpu->disable_flag(Flags::AddSubFlag);
+    cpu->disable_flag(Flags::HalfCarryFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
 
-    if ((instruction->opcode & 0x7) == 6)
+    switch (reg)
     {
-        value = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
+        case RegisterType::B:
+            value = cpu->registers.B;
+            break;
 
-        instruction->cpu->cycle(4);
+        case RegisterType::C:
+            value = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            value = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            value = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            value = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            value = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            value = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            value = cpu->registers.A;
+            break;
+    }
+
+    long carry = !!(value&0x80);
+
+    if (carry)
+    {
+        cpu->enable_flag(Flags::CarryFlag);
     }
     else
     {
-        value = instruction->cpu->get(reg);
+        cpu->disable_flag(Flags::CarryFlag);
     }
+
+    long result = ((value << 1) & 0xFF) | (carry);
+
+    switch (reg)
+    {
+        case RegisterType::B:
+            cpu->registers.B = result;
+            break;
+
+        case RegisterType::C:
+            cpu->registers.C = result;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = result;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = result;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = result;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = result;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = result;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, result);
+            cpu->tick(4);
+            break;
+    }
+
+    toggle_zero_flag(cpu, result);
+    cpu->tick(4);
+}
+
+void RRC_0x08(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+
+    long reg = cpu->read_byte_register_type(opcode, true);
+    long value = 0;
+
+    cpu->clear_flags();
+
+    switch (reg)
+    {
+        case RegisterType::B:
+            value = cpu->registers.B;
+            break;
+
+        case RegisterType::C:
+            value = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            value = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            value = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            value = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            value = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            value = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            value = cpu->registers.A;
+            break;
+    }
+
+    if ((value & 0x01) != 0)
+    {
+        cpu->enable_flag(Flags::CarryFlag);
+
+        value >>= 1;
+        value |= 0x80;
+    }
+    else
+    {
+        value >>= 1;
+    }
+
+    switch (reg)
+    {
+        case RegisterType::B:
+            cpu->registers.B = value;
+            break;
+
+        case RegisterType::C:
+            cpu->registers.C = value;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = value;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = value;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = value;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = value;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = value;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, value);
+            cpu->tick(4);
+            break;
+    }
+
+    toggle_zero_flag(cpu, value);
+    cpu->tick(4);
+}
+
+void RR_0x19(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+
+    long reg = cpu->read_byte_register_type(opcode, true);
+    long value = 0;
+
+    switch (reg)
+    {
+        case RegisterType::B:
+            value = cpu->registers.B;
+            break;
+
+        case RegisterType::C:
+            value = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            value = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            value = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            value = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            value = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            value = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            value = cpu->registers.A;
+            break;
+    }
+
+    long carry = cpu->is_flag_set(Flags::CarryFlag) ? 0x80 : 0;
+
+    cpu->clear_flags();
+
+    if ((value & 0x01) != 0)
+    {
+        cpu->enable_flag(Flags::CarryFlag);
+    }
+
+    value >>= 1;
+    value |= carry;
+
+    switch (reg)
+    {
+        case RegisterType::B:
+            cpu->registers.B = value;
+            break;
+
+        case RegisterType::C:
+            cpu->registers.C = value;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = value;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = value;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = value;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = value;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = value;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, value);
+            cpu->tick(4);
+            break;
+    }
+
+    toggle_zero_flag(cpu, value);
+    cpu->tick(4);
+}
+
+void SLA_0x20(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
+{
+    cpu->tick(4);
+
+    long reg = cpu->read_byte_register_type(opcode, true);
+    long value = 0;
+
+    switch (reg)
+    {
+        case RegisterType::B:
+            value = cpu->registers.B;
+            break;
+
+        case RegisterType::C:
+            value = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            value = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            value = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            value = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            value = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            value = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            value = cpu->registers.A;
+            break;
+    }
+
+    cpu->disable_flag(Flags::HalfCarryFlag);
+    cpu->disable_flag(Flags::AddSubFlag);
 
     if (value > 0x7F)
     {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     }
     else
     {
-        instruction->cpu->disable_flag(Flags::CarryFlag);
-    }
-
-    auto carry = instruction->cpu->is_flag_set(Flags::CarryFlag) ? 1 : 0;
-    auto result = ((value << 1) & 0xFF) | (carry);
-
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
-
-        instruction->cpu->cycle(4);
-    }
-    else
-    {
-        instruction->cpu->set(reg, result);
-    }
-
-    toggle_zero_flag(instruction->cpu, result);
-    instruction->cpu->cycle(4);
-}
-
-void RRC_0x08(Instruction* instruction)
-{
-    instruction->cpu->cycle(4);
-
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    long result = 0;
-
-    instruction->cpu->clear_flags();
-
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        result = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-
-        instruction->cpu->cycle(4);
-    }
-    else
-    {
-        result = instruction->cpu->get(reg);
-    }
-
-    if ((result & 0x01) != 0)
-    {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
-
-        result >>= 1;
-        result |= 0x80;
-    }
-    else
-    {
-        result >>= 1;
-    }
-
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
-
-        instruction->cpu->cycle(4);
-    }
-    else
-    {
-        instruction->cpu->set(reg, result);
-    }
-
-    toggle_zero_flag(instruction->cpu, result);
-    instruction->cpu->cycle(4);
-}
-
-void RR_0x19(Instruction* instruction)
-{
-    instruction->cpu->cycle(4);
-
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    long result = 0;
-
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        result = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-
-        instruction->cpu->cycle(4);
-    }
-    else
-    {
-        result = instruction->cpu->get(reg);
-    }
-
-    auto carry = instruction->cpu->is_flag_set(Flags::CarryFlag) ? 0x80 : 0;
-
-    instruction->cpu->clear_flags();
-
-    if ((result & 0x01) != 0)
-    {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
-    }
-
-    result >>= 1;
-    result |= carry;
-
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
-
-        instruction->cpu->cycle(4);
-    }
-    else
-    {
-        instruction->cpu->set(reg, result);
-    }
-
-    toggle_zero_flag(instruction->cpu, result);
-    instruction->cpu->cycle(4);
-}
-
-void SLA_0x20(Instruction* instruction)
-{
-    instruction->cpu->cycle(4);
-
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    long value = 0;
-
-    if ((instruction->opcode & 0x7) == 6)
-    {
-        value = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
-
-        instruction->cpu->cycle(4);
-    }
-    else
-    {
-        value = instruction->cpu->get(reg);
-    }
-
-    instruction->cpu->disable_flag(Flags::HalfCarryFlag);
-    instruction->cpu->disable_flag(Flags::AddSubFlag);
-
-    if (value > 0x7F)
-    {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
-    }
-    else
-    {
-        instruction->cpu->disable_flag(Flags::CarryFlag);
+        cpu->disable_flag(Flags::CarryFlag);
     }
     
-    auto result = (value << 1) & 0xFF;
+    long result = (value << 1) & 0xFF;
 
-    if ((instruction->opcode & 0x7) == 6)
+    switch (reg)
     {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
+        case RegisterType::B:
+            cpu->registers.B = result;
+            break;
 
-        instruction->cpu->cycle(4);
-    }
-    else
-    {
-        instruction->cpu->set(reg, result);
+        case RegisterType::C:
+            cpu->registers.C = result;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = result;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = result;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = result;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = result;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = result;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, result);
+            cpu->tick(4);
+            break;
     }
 
-    toggle_zero_flag(instruction->cpu, result);
-    instruction->cpu->cycle(4);
+    toggle_zero_flag(cpu, result);
+    cpu->tick(4);
 }
 
-void SRA_0x28(Instruction* instruction)
+void SRA_0x28(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
+    long reg = cpu->read_byte_register_type(opcode, true);
     long result = 0;
 
-    if ((instruction->opcode & 0x7) == 6) {
-        result = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
+    switch (reg)
+    {
+        case RegisterType::B:
+            result = cpu->registers.B;
+            break;
 
-        instruction->cpu->cycle(4);
-    } else {
-        result = instruction->cpu->get(reg);
+        case RegisterType::C:
+            result = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            result = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            result = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            result = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            result = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            result = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            result = cpu->registers.A;
+            break;
     }
 
-    instruction->cpu->clear_flags();
+    cpu->clear_flags();
 
     if ((result & 0x01) != 0) {
-        instruction->cpu->enable_flag(Flags::CarryFlag);
+        cpu->enable_flag(Flags::CarryFlag);
     }
 
     if ((result & 0x80) != 0) {
@@ -1524,43 +2826,127 @@ void SRA_0x28(Instruction* instruction)
         result >>= 1;
     }
 
-    if ((instruction->opcode & 0x7) == 6) {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
+    switch (reg)
+    {
+        case RegisterType::B:
+            cpu->registers.B = result;
+            break;
 
-        instruction->cpu->cycle(4);
-    } else {
-        instruction->cpu->set(reg, result);
+        case RegisterType::C:
+            cpu->registers.C = result;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = result;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = result;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = result;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = result;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = result;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, result);
+            cpu->tick(4);
+            break;
     }
 
-    toggle_zero_flag(instruction->cpu, result);
-    instruction->cpu->cycle(4);
+    toggle_zero_flag(cpu, result);
+    cpu->tick(4);
 }
 
-void SET_0xC0(Instruction* instruction)
+void SET_0xC0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 
-    auto reg = instruction->cpu->read_byte_register_type(instruction->opcode);
-    auto bit = (instruction->opcode & 0b00111000) >> 3;
+    long reg = cpu->read_byte_register_type(opcode, true);
+    long bit = (opcode & 0b00111000) >> 3;
 
     long result = 0;
-    if ((instruction->opcode & 0x7) == 6) {
-        result = instruction->cpu->get_memory()->read8(instruction->cpu->get(RegisterType::HL));
+    switch (reg)
+    {
+        case RegisterType::B:
+            result = cpu->registers.B;
+            break;
 
-        instruction->cpu->cycle(4);
-    } else {
-        result = instruction->cpu->get(reg);
+        case RegisterType::C:
+            result = cpu->registers.C;
+            break;
+
+        case RegisterType::D:
+            result = cpu->registers.D;
+            break;
+
+        case RegisterType::E:
+            result = cpu->registers.E;
+            break;
+
+        case RegisterType::H:
+            result = cpu->registers.H;
+            break;
+
+        case RegisterType::L:
+            result = cpu->registers.L;
+            break;
+
+        case RegisterType::HL:
+            result = cpu->memory.read8(cpu->registers.HL);
+            cpu->tick(4);
+            break;
+
+        case RegisterType::A:
+            result = cpu->registers.A;
+            break;
     }
 
     result |= (1 << bit);
 
-    if ((instruction->opcode & 0x7) == 6) {
-        instruction->cpu->get_memory()->write8(instruction->cpu->get(RegisterType::HL), result);
+    switch (reg)
+    {
+        case RegisterType::B:
+            cpu->registers.B = result;
+            break;
 
-        instruction->cpu->cycle(4);
-    } else {
-        instruction->cpu->set(reg, result);
+        case RegisterType::C:
+            cpu->registers.C = result;
+            break;
+
+        case RegisterType::D:
+            cpu->registers.D = result;
+            break;
+
+        case RegisterType::E:
+            cpu->registers.E = result;
+            break;
+
+        case RegisterType::H:
+            cpu->registers.H = result;
+            break;
+
+        case RegisterType::L:
+            cpu->registers.L = result;
+            break;
+
+        case RegisterType::A:
+            cpu->registers.A = result;
+            break;
+        
+        case RegisterType::HL:
+            cpu->memory.write8(cpu->registers.HL, result);
+            cpu->tick(4);
+            break;
     }
 
-    instruction->cpu->cycle(4);
+    cpu->tick(4);
 }

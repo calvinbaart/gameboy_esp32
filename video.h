@@ -65,6 +65,8 @@ private:
     long vblank;
 
     int frame_skip;
+    int frames;
+    long last_time;
 public:
     Video(GameboyCPU* cpu, GxEPD_Class* display);
 

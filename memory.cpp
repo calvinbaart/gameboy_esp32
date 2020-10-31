@@ -177,7 +177,7 @@ void Memory::write8(long position, long data)
                 break;
             } else if (position >= 0xFE00 && position <= 0xFE9F) {
                 oam_ram[position - 0xFE00] = data & 0xFF;
-                cpu->get_video()->oam_write(position - 0xFE00, data & 0xFF);
+                cpu->video.oam_write(position - 0xFE00, data & 0xFF);
                 break;
             }
 
@@ -237,7 +237,7 @@ void Memory::perform_oam_dma_transfer(long position)
     for (long i = 0; i <= 0x9F; i++)
     {
         oam_ram[i] = read8(position + i);
-        cpu->get_video()->oam_write(i, oam_ram[i]);
+        cpu->video.oam_write(i, oam_ram[i]);
     }
 }
 
@@ -301,92 +301,92 @@ bool Memory::write_register(long position, long data)
     switch (position)
     {
         case 0xFF00: // P1
-            // cant write to P1
+            cpu->special_register_write(SpecialRegisterType::P1, data);
             return true;
 
         case 0xFF01: // SB
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::SB, data);
+            cpu->special_register_write(SpecialRegisterType::SB, data);
             return true;
 
         case 0xFF02: // SC
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::SC, data);
+            cpu->special_register_write(SpecialRegisterType::SC, data);
             return true;
 
         case 0xFF0F: // IF
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::IF, data);
+            cpu->special_register_write(SpecialRegisterType::IF, data);
             return true;
 
         case 0xFFFF: // IE
-            GameboyCPU::instance->special_register_write(SpecialRegisterType::IE, data);
+            cpu->special_register_write(SpecialRegisterType::IE, data);
             return true;
 
         case 0xFF07: // Timer TAC
-            Timer::instance->tac = data & 0xFF;
+            cpu->timer.tac = data & 0xFF;
             return true;
 
         case 0xFF04: // Timer DIV
-            Timer::instance->div = 0;
+            cpu->timer.div = 0;
             return true;
 
         case 0xFF05: // Timer TIMA
-            Timer::instance->tima = data & 0xFF;
+            cpu->timer.tima = data & 0xFF;
             return true;
 
         case 0xFF06: // Timer TMA
-            Timer::instance->tma = data & 0xFF;
+            cpu->timer.tma = data & 0xFF;
             return true;
 
         case 0xFF50: // bios disable
-            GameboyCPU::instance->get_memory()->disable_bios();
-            GameboyCPU::instance->bootstrap_completed = true;
+            disable_bios();
+            cpu->bootstrap_completed = true;
             return true;
 
         case 0xFF40: //LCDC
-            Video::instance->write_register(VideoRegisterType::LCDC, data);
+            cpu->video.write_register(VideoRegisterType::LCDC, data);
             return true;
 
         case 0xFF41: //STAT
-            Video::instance->write_register(VideoRegisterType::STAT, data);
+            cpu->video.write_register(VideoRegisterType::STAT, data);
             return true;
 
         case 0xFF42: //SCY
-            Video::instance->write_register(VideoRegisterType::SCY, data);
+            cpu->video.write_register(VideoRegisterType::SCY, data);
             return true;
 
         case 0xFF43: //SCX
-            Video::instance->write_register(VideoRegisterType::SCX, data);
+            cpu->video.write_register(VideoRegisterType::SCX, data);
             return true;
 
         case 0xFF44: //LY
-            Video::instance->write_register(VideoRegisterType::LY, data);
+            cpu->video.write_register(VideoRegisterType::LY, data);
             return true;
 
         case 0xFF45: //LYC
-            Video::instance->write_register(VideoRegisterType::LYC, data);
+            cpu->video.write_register(VideoRegisterType::LYC, data);
             return true;
 
         case 0xFF46: //DMA
-            Video::instance->write_register(VideoRegisterType::DMA, data);
+            cpu->video.write_register(VideoRegisterType::DMA, data);
             return true;
 
         case 0xFF47: //BGP
-            Video::instance->write_register(VideoRegisterType::BGP, data);
+            cpu->video.write_register(VideoRegisterType::BGP, data);
             return true;
 
         case 0xFF48: //OBP0
-            Video::instance->write_register(VideoRegisterType::OBP0, data);
+            cpu->video.write_register(VideoRegisterType::OBP0, data);
             return true;
 
         case 0xFF49: //OBP1
-            Video::instance->write_register(VideoRegisterType::OBP1, data);
+            cpu->video.write_register(VideoRegisterType::OBP1, data);
             return true;
 
         case 0xFF4A: //WY
-            Video::instance->write_register(VideoRegisterType::WY, data);
+            cpu->video.write_register(VideoRegisterType::WY, data);
             return true;
 
         case 0xFF4B: //WX
-            Video::instance->write_register(VideoRegisterType::WX, data);
+            cpu->video.write_register(VideoRegisterType::WX, data);
             return true;
 
         // default:
@@ -401,70 +401,70 @@ long Memory::read_register(long position)
     switch (position)
     {
         case 0xFF00: // P1
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::P1);
+            return cpu->special_register_read(SpecialRegisterType::P1);
 
         case 0xFF01: // SB
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SB);
+            return cpu->special_register_read(SpecialRegisterType::SB);
 
         case 0xFF02: // SC
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::SC);
+            return cpu->special_register_read(SpecialRegisterType::SC);
 
         case 0xFF0F: // IF
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IF);
+            return cpu->special_register_read(SpecialRegisterType::IF);
 
         case 0xFFFF: // IE
-            return GameboyCPU::instance->special_register_read(SpecialRegisterType::IE);
+            return cpu->special_register_read(SpecialRegisterType::IE);
 
         case 0xFF07: // Timer TAC
-            return Timer::instance->tac | 0b11111000;
+            return cpu->timer.tac | 0b11111000;
 
         case 0xFF04: // Timer DIV
-            return Timer::instance->div;
+            return cpu->timer.div;
 
         case 0xFF05: // Timer TIMA
-            return Timer::instance->tima;
+            return cpu->timer.tima;
 
         case 0xFF06: // Timer TMA
-            return Timer::instance->tma;
+            return cpu->timer.tma;
 
         case 0xFF50: // bios disable
             return 0xFF;
 
         case 0xFF40: //LCDC
-            return Video::instance->read_register(VideoRegisterType::LCDC);
+            return cpu->video.read_register(VideoRegisterType::LCDC);
 
         case 0xFF41: //STAT
-            return Video::instance->read_register(VideoRegisterType::STAT);
+            return cpu->video.read_register(VideoRegisterType::STAT);
 
         case 0xFF42: //SCY
-            return Video::instance->read_register(VideoRegisterType::SCY);
+            return cpu->video.read_register(VideoRegisterType::SCY);
 
         case 0xFF43: //SCX
-            return Video::instance->read_register(VideoRegisterType::SCX);
+            return cpu->video.read_register(VideoRegisterType::SCX);
 
         case 0xFF44: //LY
-            return Video::instance->read_register(VideoRegisterType::LY);
+            return cpu->video.read_register(VideoRegisterType::LY);
 
         case 0xFF45: //LYC
-            return Video::instance->read_register(VideoRegisterType::LYC);
+            return cpu->video.read_register(VideoRegisterType::LYC);
 
         case 0xFF46: //DMA
-            return Video::instance->read_register(VideoRegisterType::DMA);
+            return cpu->video.read_register(VideoRegisterType::DMA);
 
         case 0xFF47: //BGP
-            return Video::instance->read_register(VideoRegisterType::BGP);
+            return cpu->video.read_register(VideoRegisterType::BGP);
 
         case 0xFF48: //OBP0
-            return Video::instance->read_register(VideoRegisterType::OBP0);
+            return cpu->video.read_register(VideoRegisterType::OBP0);
 
         case 0xFF49: //OBP1
-            return Video::instance->read_register(VideoRegisterType::OBP1);
+            return cpu->video.read_register(VideoRegisterType::OBP1);
 
         case 0xFF4A: //WY
-            return Video::instance->read_register(VideoRegisterType::WY);
+            return cpu->video.read_register(VideoRegisterType::WY);
 
         case 0xFF4B: //WX
-            return Video::instance->read_register(VideoRegisterType::WX);
+            return cpu->video.read_register(VideoRegisterType::WX);
 
         // default:
         //     Serial.println("unknown read register: " + String(position));

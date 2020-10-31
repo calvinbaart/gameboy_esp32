@@ -2,6 +2,10 @@
 #include "gameboy_cpu.h"
 #include "memory.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_task_wdt.h"
+
 Video *Video::instance = nullptr;
 
 static long bit_get(long input, long bit)
@@ -23,6 +27,24 @@ static uint8_t get_color(long palette, long bit, bool transparent)
     return color;
 }
 
+TaskHandle_t videoTaskHandle = NULL;
+bool render_started = false;
+
+extern bool loopTaskWDTEnabled;
+
+void videoTask(void *pvParameters)
+{
+    for(;;) {
+        if (!render_started) {
+            delay(200);
+            continue;
+        }
+
+        Video::instance->render();
+        delay(200);
+    }
+}
+
 Video::Video(GameboyCPU *cpu, GxEPD_Class *display)
 {
     this->cpu = cpu;
@@ -34,11 +56,15 @@ Video::Video(GameboyCPU *cpu, GxEPD_Class *display)
     framebuffer_numbers = new uint8_t[160 * 144];
 
     frame_skip = 0;
+    frames = 0;
 
     memset(framebuffer, 0, 160 * 144 * sizeof(uint8_t));
     memset(framebuffer_numbers, 0, 160 * 144 * sizeof(uint8_t));
     memset(registers, 0, (VideoRegisterType::WX + 1) * sizeof(uint8_t));
     memset(sprites, 0, 0x40 * sizeof(Sprite));
+
+    loopTaskWDTEnabled = true;
+    xTaskCreatePinnedToCore(videoTask, "videoTask", 2048, NULL, 1, &videoTaskHandle, 0);
 }
 
 void Video::tick(long delta)
@@ -81,7 +107,8 @@ void Video::tick(long delta)
 
             if (registers[VideoRegisterType::LY] == 144)
             {
-                render();
+                render_started = true;
+                // render();
                 vblank = 0;
 
                 registers[VideoRegisterType::STAT] = ((registers[VideoRegisterType::STAT] & ~0x03) | VideoMode::VBlank);
@@ -177,7 +204,7 @@ void Video::write_register(VideoRegisterType reg, long value)
     switch (reg)
     {
         case VideoRegisterType::DMA:
-            cpu->get_memory()->perform_oam_dma_transfer(value * 0x100);
+            cpu->memory.perform_oam_dma_transfer(value * 0x100);
             break;
 
         case VideoRegisterType::LCDC:
@@ -193,7 +220,8 @@ void Video::write_register(VideoRegisterType reg, long value)
                     }
                 }
 
-                render();
+                render_started = true;
+                // render();
             }
             break;
 
@@ -213,13 +241,15 @@ void Video::render_scanline()
 
 void Video::render()
 {
-    if (frame_skip < 5)
-    {
-        frame_skip++;
-        return;
-    }
+    frames++;
 
-    frame_skip = 0;
+    // long now = millis();
+    // if (now - last_time >= 1000) {
+    //     Serial.println("frames=" + String(frames));
+
+    //     last_time = now;
+    //     frames=0;
+    // }
 
     float y_scaling = 122.0f / 144.0f;
 
@@ -247,7 +277,11 @@ void Video::render()
     display->fillRect(0, 0, start_x, display->height(), GxEPD_BLACK);
     display->fillRect(start_x + 160, 0, display->width() - (start_x + 160), display->height(), GxEPD_BLACK);
 
-    display->updateWindow(0, 0, display->width(), display->height());
+    if (frames % 20 == 0) {
+        display->update();
+    } else {
+        display->updateWindow(0, 0, display->width(), display->height());
+    }
 }
 
 void Video::render_window()
@@ -301,7 +335,7 @@ void Video::render_window()
         if (tx != tileX)
         {
             auto tileMapAddr = base + (tileY * 32) + tileX;
-            auto tileNumber = cpu->get_memory()->read_video_ram(tileMapAddr, 0);
+            auto tileNumber = cpu->memory.read_video_ram(tileMapAddr, 0);
 
             // Read tileValue as signed
             if (!active_tileset)
@@ -313,8 +347,8 @@ void Video::render_window()
             auto offset = tileFlipY ? 7 - tileYOffset : tileYOffset;
             auto tileAddr = tileBase + tileNumber * 0x10 + (offset * 2);
 
-            byte1 = cpu->get_memory()->read_video_ram(tileAddr, tileBank);
-            byte2 = cpu->get_memory()->read_video_ram(tileAddr + 1, tileBank);
+            byte1 = cpu->memory.read_video_ram(tileAddr, tileBank);
+            byte2 = cpu->memory.read_video_ram(tileAddr + 1, tileBank);
 
             tx = tileX;
         }
@@ -367,7 +401,7 @@ void Video::render_background()
         if (tx != tileX)
         {
             auto tileMapAddr = base + (tileY * 32) + tileX;
-            auto tileNumber = cpu->get_memory()->read_video_ram(tileMapAddr, 0);
+            auto tileNumber = cpu->memory.read_video_ram(tileMapAddr, 0);
 
             tileFlipX = false;
             tileFlipY = false;
@@ -385,8 +419,8 @@ void Video::render_background()
             auto offset = tileFlipY ? 7 - tileYOffset : tileYOffset;
             auto tileAddr = tileBase + tileNumber * 0x10 + (offset * 2);
 
-            byte1 = cpu->get_memory()->read_video_ram(tileAddr, tileBank);
-            byte2 = cpu->get_memory()->read_video_ram(tileAddr + 1, tileBank);
+            byte1 = cpu->memory.read_video_ram(tileAddr, tileBank);
+            byte2 = cpu->memory.read_video_ram(tileAddr + 1, tileBank);
 
             tx = tileX;
         }
@@ -440,8 +474,8 @@ void Video::render_sprites()
                 continue;
             }
             
-            auto byte1 = cpu->get_memory()->read_video_ram(tileAddr, sprite.vram);
-            auto byte2 = cpu->get_memory()->read_video_ram(tileAddr + 1, sprite.vram);
+            auto byte1 = cpu->memory.read_video_ram(tileAddr, sprite.vram);
+            auto byte2 = cpu->memory.read_video_ram(tileAddr + 1, sprite.vram);
 
             auto bit = 7 - spriteX;
 

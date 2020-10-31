@@ -3,6 +3,9 @@
 
 #include "board_config.h"
 #include "registers.h"
+#include "memory.h"
+#include "video.h"
+#include "timer.h"
 
 enum RegisterType
 {
@@ -19,8 +22,18 @@ enum RegisterType
     PC = 11,
     BC = 12,
     DE = 13,
-    HL = 14,
-    None = 15
+    HL = 14
+};
+
+enum class Key {
+    A = 4,
+    B = 5,
+    Start = 7,
+    Select = 6,
+    Up = 2,
+    Down = 3,
+    Left = 1,
+    Right = 0
 };
 
 enum class SpecialRegisterType
@@ -84,35 +97,25 @@ enum class RomType {
 class GameboyCPU;
 struct Instruction
 {
+    uint8_t opcode;
     bool is_cb;
-    long pc;
-    long opcode;
     long ticks;
 
-    GameboyCPU* cpu;
-
-    void (*exec)(Instruction*);
+    void (*exec)(uint8_t,GameboyCPU*,Instruction*);
 };
 
-class Memory;
-class Video;
-class Timer;
 class GameboyCPU
 {
 private:
-    Registers registers;
-    Memory* memory;
-    Video* video;
-    Timer* timer;
     Instruction* instruction;
-    GxEPD_Class* display;
     long cycles;
 
-    void tick(long num_cycles);
     void fetch_and_decode();
 
     bool enable_interrupts;
     bool wait_for_interrupt;
+
+    long joypad_state;
 public:
     GameboyCPU(GxEPD_Class* display);
 
@@ -125,26 +128,63 @@ public:
     long read_s8();
     long read_s16();
 
-    long increment(RegisterType reg, long num = 1);
-    long decrement(RegisterType reg, long num = 1);
+    inline RegisterType read_register_type(long val, bool useAF)
+    {
+        switch (val & 0x03)
+        {
+            case 0x00:
+                return RegisterType::BC;
 
-    Memory* get_memory();
-    Video* get_video();
+            case 0x01:
+                return RegisterType::DE;
 
-    RegisterType read_register_type(long val, bool useAF);
-    RegisterType read_byte_register_type(long val);
+            case 0x02:
+                return RegisterType::HL;
+
+            case 0x03:
+                return useAF ? RegisterType::AF : RegisterType::SP;
+        }
+    }
+
+    inline RegisterType read_byte_register_type(long val, bool has_hl = false)
+    {
+        switch (val & 0x07)
+        {
+            case 0x00:
+                return RegisterType::B;
+
+            case 0x01:
+                return RegisterType::C;
+
+            case 0x02:
+                return RegisterType::D;
+
+            case 0x03:
+                return RegisterType::E;
+
+            case 0x04:
+                return RegisterType::H;
+
+            case 0x05:
+                return RegisterType::L;
+
+            case 0x06:
+                return has_hl ? RegisterType::HL : RegisterType::F;
+
+            case 0x07:
+                return RegisterType::A;
+        }
+    }
 
     bool step();
+    void tick(long num_cycles);
 
     long get_cycles();
-    void cycle(long num);
-
-    long set(RegisterType reg, long value);
-    long get(RegisterType reg);
 
     void clear_flags();
     void enable_flag(Flags flag);
     void disable_flag(Flags flag);
+    void set_flag(Flags flag, bool condition);
     bool is_flag_set(Flags flag);
 
     void push_stack(long num);
@@ -160,9 +200,17 @@ public:
     void set_enable_interrupts(bool enabled);
     void set_wait_for_interrupt(bool enabled);
 
+    void key_state(Key key, bool pressed);
+    void tick_input(long cycles);
+
     static GameboyCPU* instance;
 
     bool bootstrap_completed;
+
+    Registers registers;
+    Memory memory;
+    Video video;
+    Timer timer;
 };
 
 #endif

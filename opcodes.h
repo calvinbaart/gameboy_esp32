@@ -3,229 +3,349 @@
 
 #include "gameboy_cpu.h"
 
-extern void LD_0x01x11x21x31(Instruction* instruction);
-extern void XOR_0xA9(Instruction* instruction);
-extern void LD_0x32(Instruction* instruction);
-extern void JR_0x20(Instruction* instruction);
-extern void LD_0x06(Instruction* instruction);
-extern void LD_0xE2(Instruction* instruction);
-extern void LD_0x70(Instruction* instruction);
-extern void LDH_0xE0(Instruction* instruction);
-extern void LD_0x1A(Instruction* instruction);
-extern void INC_0x04x0Cx14x1Cx24x2Cx3C(Instruction* instruction);
-extern void CALL_0xCD(Instruction* instruction);
-extern void LD_0x40(Instruction* instruction);
-extern void LD_0x22(Instruction* instruction);
-extern void PUSH_0xC5(Instruction* instruction);
-extern void POP_0xC1(Instruction* instruction);
-extern void RLA_0x17(Instruction* instruction);
-extern void DEC_0x05x0Dx15x1Dx25x2Dx3D(Instruction* instruction);
-extern void INC_0x03x13x23x33(Instruction* instruction);
-extern void RET_0xC9(Instruction* instruction);
-extern void CP_0xFE(Instruction* instruction);
-extern void LD_0xEA(Instruction* instruction);
-extern void JR_0x18(Instruction* instruction);
-extern void LDH_0xF0(Instruction* instruction);
-extern void SUB_0x90(Instruction* instruction);
-extern void CP_0xBE(Instruction* instruction);
-extern void ADD_0x86(Instruction* instruction);
-extern void JP_0xC3(Instruction* instruction);
-extern void DI_0xF3(Instruction* instruction);
-extern void LD_0x36(Instruction* instruction);
-extern void LD_0x2A(Instruction* instruction);
-extern void DEC_0x0B(Instruction* instruction);
-extern void OR_0xB0(Instruction* instruction);
-extern void EI_0xFB(Instruction* instruction);
-extern void AND_0xA0(Instruction* instruction);
-extern void RET_0xC0(Instruction* instruction);
-extern void LD_0xFA(Instruction* instruction);
-extern void INC_0x34(Instruction* instruction);
-extern void RETI_0xD9(Instruction* instruction);
-extern void CPL_0x2F(Instruction* instruction);
-extern void AND_0xE6(Instruction* instruction);
-extern void RST_0xEF(Instruction* instruction);
-extern void ADD_0x81(Instruction* instruction);
-extern void ADD_0x09(Instruction* instruction);
-extern void LD_0x46(Instruction* instruction);
-extern void JP_0xE9(Instruction* instruction);
-extern void LD_0x12(Instruction* instruction);
-extern void JP_0xC2(Instruction* instruction);
-extern void LD_0x02(Instruction* instruction);
-extern void RLCA_0x07(Instruction* instruction);
-extern void LD_0x08(Instruction* instruction);
-extern void LD_0x0A(Instruction* instruction);
-extern void RRCA_0x0F(Instruction* instruction);
-extern void RRA_0x1F(Instruction* instruction);
-extern void DAA_0x27(Instruction* instruction);
-extern void DEC_0x35(Instruction* instruction);
-extern void SCF_0x37(Instruction* instruction);
-extern void LD_0x3A(Instruction* instruction);
-extern void CCF_0x3F(Instruction* instruction);
-extern void HALT_0x76(Instruction* instruction);
-extern void ADC_0x8F(Instruction* instruction);
-extern void SUB_0x96(Instruction* instruction);
-extern void SBC_0xDE(Instruction* instruction);
-extern void AND_0xA6(Instruction* instruction);
-extern void XOR_0xAE(Instruction* instruction);
-extern void OR_0xB6(Instruction* instruction);
-extern void CP_0xBB(Instruction* instruction);
-extern void CALL_0xC4(Instruction* instruction);
-extern void ADD_0xC6(Instruction* instruction);
-extern void SUB_0xD6(Instruction* instruction);
-extern void ADD_0xE8(Instruction* instruction);
-extern void XOR_0xEE(Instruction* instruction);
-extern void LD_0xF2(Instruction* instruction);
-extern void OR_0xF6(Instruction* instruction);
-extern void LD_0xF8(Instruction* instruction);
-extern void LD_0xF9(Instruction* instruction);
+extern void LD_0x01(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x11(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x21(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x31(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xA8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xA9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xAA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xAB(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xAC(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xAD(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xAF(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x32(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void JR_0x20(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x06(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x0E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x16(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x1E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x26(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x2E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x3E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0xE2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x70(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x71(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x72(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x73(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x74(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x75(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x77(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LDH_0xE0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x1A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x04(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x0C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x14(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x1C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x24(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x2C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x3C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CALL_0xCD(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x40(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x41(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x42(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x43(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x44(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x45(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x47(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x48(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x49(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x4A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x4B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x4C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x4D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x4F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x50(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x51(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x52(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x53(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x54(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x55(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x57(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x58(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x59(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x5A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x5B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x5C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x5D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x5F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x60(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x61(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x62(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x63(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x64(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x65(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x67(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x68(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x69(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x6A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x6B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x6C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x6D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x6F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x78(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x79(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x7A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x7B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x7C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x7D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x7F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x22(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void PUSH_0xC5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void PUSH_0xD5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void PUSH_0xE5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void PUSH_0xF5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void POP_0xC1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void POP_0xD1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void POP_0xE1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void POP_0xF1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RLA_0x17(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x05(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x0D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x15(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x1D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x25(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x2D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x3D(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x03(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x13(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x23(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x33(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RET_0xC9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xFE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0xEA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void JR_0x18(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LDH_0xF0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SUB_0x90(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xBE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0x86(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void JP_0xC3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DI_0xF3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x36(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x2A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x0B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x1B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x2B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x3B(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB4(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB7(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void EI_0xFB(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA1(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA3(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA4(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA5(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA7(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RET_0xC0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0xFA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void INC_0x34(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RETI_0xD9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CPL_0x2F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xE6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RST_0xEF(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0x81(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0x09(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0x19(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0x29(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0x39(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x46(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x4E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x56(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x5E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x66(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x6E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x7E(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void JP_0xE9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x12(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void JP_0xC2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x02(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RLCA_0x07(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x08(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x0A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RRCA_0x0F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RRA_0x1F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DAA_0x27(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void DEC_0x35(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SCF_0x37(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0x3A(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CCF_0x3F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void HALT_0x76(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADC_0x8F(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SUB_0x96(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SBC_0xDE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void AND_0xA6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xAE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xB6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xB8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xB9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xBA(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xBB(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xBC(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xBD(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CP_0xBF(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void CALL_0xC4(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0xC6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SUB_0xD6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void ADD_0xE8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void XOR_0xEE(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0xF2(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void OR_0xF6(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0xF8(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void LD_0xF9(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
 
 // CB
-extern void BIT_0x7C(Instruction* instruction);
-extern void RL_0x11(Instruction* instruction);
-extern void SWAP_0x37(Instruction* instruction);
-extern void RES_0x87(Instruction* instruction);
-extern void SRL_0x38(Instruction* instruction);
-extern void RLC_0x00(Instruction* instruction);
-extern void RRC_0x08(Instruction* instruction);
-extern void RR_0x19(Instruction* instruction);
-extern void SLA_0x20(Instruction* instruction);
-extern void SRA_0x28(Instruction* instruction);
-extern void SET_0xC0(Instruction* instruction);
+extern void BIT_0x7C(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RL_0x11(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SWAP_0x37(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RES_0x87(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SRL_0x38(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RLC_0x00(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RRC_0x08(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void RR_0x19(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SLA_0x20(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SRA_0x28(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
+extern void SET_0xC0(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction);
 
-static void NOP_0x00(Instruction* instruction)
+static void NOP_0x00(uint8_t opcode, GameboyCPU* cpu, Instruction* instruction)
 {
     // NOP
 }
 
-static void (*opcodes[])(Instruction*) = {
+static void (*opcodes[])(uint8_t, GameboyCPU*, Instruction*) = {
     &NOP_0x00, //0x00
-    &LD_0x01x11x21x31, //0x01
+    &LD_0x01, //0x01
     &LD_0x02, //0x02
-    &INC_0x03x13x23x33, //0x03
-    &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x04
-    &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x05
+    &INC_0x03, //0x03
+    &INC_0x04, //0x04
+    &DEC_0x05, //0x05
     &LD_0x06, //0x06
     &RLCA_0x07, //0x07
     &LD_0x08, //0x08
     &ADD_0x09, //0x09
     &LD_0x0A, //0x0A
     &DEC_0x0B, //0x0B
-    &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x0C
-    &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x0D
-    &LD_0x06, //0x0E
+    &INC_0x0C, //0x0C
+    &DEC_0x0D, //0x0D
+    &LD_0x0E, //0x0E
     &RRCA_0x0F, //0x0F
     &NOP_0x00, //0x10 (STOP)
-    &LD_0x01x11x21x31, //0x11
+    &LD_0x11, //0x11
     &LD_0x12, //0x12
-    &INC_0x03x13x23x33, //0x13
-    &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x14
-    &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x15
-    &LD_0x06, //0x16
+    &INC_0x13, //0x13
+    &INC_0x14, //0x14
+    &DEC_0x15, //0x15
+    &LD_0x16, //0x16
     &RLA_0x17, //0x17
     &JR_0x18, //0x18
-    &ADD_0x09, //0x19
+    &ADD_0x19, //0x19
     &LD_0x1A, //0x1A
-    &DEC_0x0B, //0x1B
-    &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x1C
-    &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x1D
-    &LD_0x06, //0x1E
+    &DEC_0x1B, //0x1B
+    &INC_0x1C, //0x1C
+    &DEC_0x1D, //0x1D
+    &LD_0x1E, //0x1E
     &RRA_0x1F, //0x1F
     &JR_0x20, //0x20
-    &LD_0x01x11x21x31, //0x21
+    &LD_0x21, //0x21
     &LD_0x22, //0x22
-    &INC_0x03x13x23x33, //0x23
-    &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x24
-    &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x25
-    &LD_0x06, //0x26
+    &INC_0x23, //0x23
+    &INC_0x24, //0x24
+    &DEC_0x25, //0x25
+    &LD_0x26, //0x26
     &DAA_0x27, //0x27
     &JR_0x20, //0x28
-    &ADD_0x09, //0x29
+    &ADD_0x29, //0x29
     &LD_0x2A, //0x2A
-    &DEC_0x0B, //0x2B
-    &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x2C
-    &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x2D
-    &LD_0x06, //0x2E
+    &DEC_0x2B, //0x2B
+    &INC_0x2C, //0x2C
+    &DEC_0x2D, //0x2D
+    &LD_0x2E, //0x2E
     &CPL_0x2F, //0x2F
     &JR_0x20, //0x30
-    &LD_0x01x11x21x31, //0x31
+    &LD_0x31, //0x31
     &LD_0x32, //0x32
-    &INC_0x03x13x23x33, //0x33
+    &INC_0x33, //0x33
     &INC_0x34, //0x34
     &DEC_0x35, //0x35
     &LD_0x36, //0x36
     &SCF_0x37, //0x37
     &JR_0x20, //0x38
-    &ADD_0x09, //0x39
+    &ADD_0x39, //0x39
     &LD_0x3A, //0x3A
-    &DEC_0x0B, //0x3B
-    &INC_0x04x0Cx14x1Cx24x2Cx3C, //0x3C
-    &DEC_0x05x0Dx15x1Dx25x2Dx3D, //0x3D
-    &LD_0x06, //0x3E
+    &DEC_0x3B, //0x3B
+    &INC_0x3C, //0x3C
+    &DEC_0x3D, //0x3D
+    &LD_0x3E, //0x3E
     &CCF_0x3F, //0x3F
     &LD_0x40, //0x40
-    &LD_0x40, //0x41
-    &LD_0x40, //0x42
-    &LD_0x40, //0x43
-    &LD_0x40, //0x44
-    &LD_0x40, //0x45
+    &LD_0x41, //0x41
+    &LD_0x42, //0x42
+    &LD_0x43, //0x43
+    &LD_0x44, //0x44
+    &LD_0x45, //0x45
     &LD_0x46, //0x46
-    &LD_0x40, //0x47
-    &LD_0x40, //0x48
-    &LD_0x40, //0x49
-    &LD_0x40, //0x4A
-    &LD_0x40, //0x4B
-    &LD_0x40, //0x4C
-    &LD_0x40, //0x4D
-    &LD_0x46, //0x4E
-    &LD_0x40, //0x4F
-    &LD_0x40, //0x50
-    &LD_0x40, //0x51
-    &LD_0x40, //0x52
-    &LD_0x40, //0x53
-    &LD_0x40, //0x54
-    &LD_0x40, //0x55
-    &LD_0x46, //0x56
-    &LD_0x40, //0x57
-    &LD_0x40, //0x58
-    &LD_0x40, //0x59
-    &LD_0x40, //0x5A
-    &LD_0x40, //0x5B
-    &LD_0x40, //0x5C
-    &LD_0x40, //0x5D
-    &LD_0x46, //0x5E
-    &LD_0x40, //0x5F
-    &LD_0x40, //0x60
-    &LD_0x40, //0x61
-    &LD_0x40, //0x62
-    &LD_0x40, //0x63
-    &LD_0x40, //0x64
-    &LD_0x40, //0x65
-    &LD_0x46, //0x66
-    &LD_0x40, //0x67
-    &LD_0x40, //0x68
-    &LD_0x40, //0x69
-    &LD_0x40, //0x6A
-    &LD_0x40, //0x6B
-    &LD_0x40, //0x6C
-    &LD_0x40, //0x6D
-    &LD_0x46, //0x6E
-    &LD_0x40, //0x6F
+    &LD_0x47, //0x47
+    &LD_0x48, //0x48
+    &LD_0x49, //0x49
+    &LD_0x4A, //0x4A
+    &LD_0x4B, //0x4B
+    &LD_0x4C, //0x4C
+    &LD_0x4D, //0x4D
+    &LD_0x4E, //0x4E
+    &LD_0x4F, //0x4F
+    &LD_0x50, //0x50
+    &LD_0x51, //0x51
+    &LD_0x52, //0x52
+    &LD_0x53, //0x53
+    &LD_0x54, //0x54
+    &LD_0x55, //0x55
+    &LD_0x56, //0x56
+    &LD_0x57, //0x57
+    &LD_0x58, //0x58
+    &LD_0x59, //0x59
+    &LD_0x5A, //0x5A
+    &LD_0x5B, //0x5B
+    &LD_0x5C, //0x5C
+    &LD_0x5D, //0x5D
+    &LD_0x5E, //0x5E
+    &LD_0x5F, //0x5F
+    &LD_0x60, //0x60
+    &LD_0x61, //0x61
+    &LD_0x62, //0x62
+    &LD_0x63, //0x63
+    &LD_0x64, //0x64
+    &LD_0x65, //0x65
+    &LD_0x66, //0x66
+    &LD_0x67, //0x67
+    &LD_0x68, //0x68
+    &LD_0x69, //0x69
+    &LD_0x6A, //0x6A
+    &LD_0x6B, //0x6B
+    &LD_0x6C, //0x6C
+    &LD_0x6D, //0x6D
+    &LD_0x6E, //0x6E
+    &LD_0x6F, //0x6F
     &LD_0x70, //0x70
-    &LD_0x70, //0x71
-    &LD_0x70, //0x72
-    &LD_0x70, //0x73
-    &LD_0x70, //0x74
-    &LD_0x70, //0x75
+    &LD_0x71, //0x71
+    &LD_0x72, //0x72
+    &LD_0x73, //0x73
+    &LD_0x74, //0x74
+    &LD_0x75, //0x75
     &HALT_0x76, //0x76
-    &LD_0x70, //0x77
-    &LD_0x40, //0x78
-    &LD_0x40, //0x79
-    &LD_0x40, //0x7A
-    &LD_0x40, //0x7B
-    &LD_0x40, //0x7C
-    &LD_0x40, //0x7D
-    &LD_0x46, //0x7E
-    &LD_0x40, //0x7F
+    &LD_0x77, //0x77
+    &LD_0x78, //0x78
+    &LD_0x79, //0x79
+    &LD_0x7A, //0x7A
+    &LD_0x7B, //0x7B
+    &LD_0x7C, //0x7C
+    &LD_0x7D, //0x7D
+    &LD_0x7E, //0x7E
+    &LD_0x7F, //0x7F
     &ADD_0x81, //0x80
     &ADD_0x81, //0x81
     &ADD_0x81, //0x82
@@ -259,37 +379,37 @@ static void (*opcodes[])(Instruction*) = {
     &SBC_0xDE, //0x9E
     &SBC_0xDE, //0x9F
     &AND_0xA0, //0xA0
-    &AND_0xA0, //0xA1
-    &AND_0xA0, //0xA2
-    &AND_0xA0, //0xA3
-    &AND_0xA0, //0xA4
-    &AND_0xA0, //0xA5
+    &AND_0xA1, //0xA1
+    &AND_0xA2, //0xA2
+    &AND_0xA3, //0xA3
+    &AND_0xA4, //0xA4
+    &AND_0xA5, //0xA5
     &AND_0xA6, //0xA6
-    &AND_0xA0, //0xA7
-    &XOR_0xA9, //0xA8
+    &AND_0xA7, //0xA7
+    &XOR_0xA8, //0xA8
     &XOR_0xA9, //0xA9
-    &XOR_0xA9, //0xAA
-    &XOR_0xA9, //0xAB
-    &XOR_0xA9, //0xAC
-    &XOR_0xA9, //0xAD
+    &XOR_0xAA, //0xAA
+    &XOR_0xAB, //0xAB
+    &XOR_0xAC, //0xAC
+    &XOR_0xAD, //0xAD
     &XOR_0xAE, //0xAE
-    &XOR_0xA9, //0xAF
+    &XOR_0xAF, //0xAF
     &OR_0xB0, //0xB0
-    &OR_0xB0, //0xB1
-    &OR_0xB0, //0xB2
-    &OR_0xB0, //0xB3
-    &OR_0xB0, //0xB4
-    &OR_0xB0, //0xB5
+    &OR_0xB1, //0xB1
+    &OR_0xB2, //0xB2
+    &OR_0xB3, //0xB3
+    &OR_0xB4, //0xB4
+    &OR_0xB5, //0xB5
     &OR_0xB6, //0xB6
-    &OR_0xB0, //0xB7
-    &CP_0xBB, //0xB8
-    &CP_0xBB, //0xB9
-    &CP_0xBB, //0xBA
+    &OR_0xB7, //0xB7
+    &CP_0xB8, //0xB8
+    &CP_0xB9, //0xB9
+    &CP_0xBA, //0xBA
     &CP_0xBB, //0xBB
-    &CP_0xBB, //0xBC
-    &CP_0xBB, //0xBD
+    &CP_0xBC, //0xBC
+    &CP_0xBD, //0xBD
     &CP_0xBE, //0xBE
-    &CP_0xBB, //0xBF
+    &CP_0xBF, //0xBF
     &RET_0xC0, //0xC0
     &POP_0xC1, //0xC1
     &JP_0xC2, //0xC2
@@ -307,11 +427,11 @@ static void (*opcodes[])(Instruction*) = {
     &ADC_0x8F, //0xCE
     &RST_0xEF, //0xCF
     &RET_0xC0, //0xD0
-    &POP_0xC1, //0xD1
+    &POP_0xD1, //0xD1
     &JP_0xC2, //0xD2
     nullptr, //0xD3
     &CALL_0xC4, //0xD4
-    &PUSH_0xC5, //0xD5
+    &PUSH_0xD5, //0xD5
     &SUB_0xD6, //0xD6
     &RST_0xEF, //0xD7
     &RET_0xC0, //0xD8
@@ -323,11 +443,11 @@ static void (*opcodes[])(Instruction*) = {
     &SBC_0xDE, //0xDE
     &RST_0xEF, //0xDF
     &LDH_0xE0, //0xE0
-    &POP_0xC1, //0xE1
+    &POP_0xE1, //0xE1
     &LD_0xE2, //0xE2
     nullptr, //0xE3
     nullptr, //0xE4
-    &PUSH_0xC5, //0xE5
+    &PUSH_0xE5, //0xE5
     &AND_0xE6, //0xE6
     &RST_0xEF, //0xE7
     &ADD_0xE8, //0xE8
@@ -339,11 +459,11 @@ static void (*opcodes[])(Instruction*) = {
     &XOR_0xEE, //0xEE
     &RST_0xEF, //0xEF
     &LDH_0xF0, //0xF0
-    &POP_0xC1, //0xF1
+    &POP_0xF1, //0xF1
     &LD_0xF2, //0xF2
     &DI_0xF3, //0xF3
     nullptr, //0xF4
-    &PUSH_0xC5, //0xF5
+    &PUSH_0xF5, //0xF5
     &OR_0xF6, //0xF6
     &RST_0xEF, //0xF7
     &LD_0xF8, //0xF8
@@ -615,7 +735,7 @@ static int opcode_ticks[] = {
     16, //0xFF
 };
 
-static void (*cb_opcodes[])(Instruction*) = {
+static void (*cb_opcodes[])(uint8_t, GameboyCPU*, Instruction*) = {
     &RLC_0x00, //0x00
     &RLC_0x00, //0x01
     &RLC_0x00, //0x02
@@ -925,7 +1045,7 @@ static int cb_opcode_ticks[] = {
     0, //0x2F
     0, //0x30
     0, //0x31
-    8, //0x32
+    0, //0x32
     0, //0x33
     0, //0x34
     0, //0x35
